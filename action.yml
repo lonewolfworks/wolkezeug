@@ -2,6 +2,7 @@ name: 'Wolkezeug'
 description: 'Deploy managed resources to AWS via manifest'
 branding:
   icon: cloud-snow
+  color: blue
 inputs:
   manifest-file:  
     description: 'yml file for deploy meta'

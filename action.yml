@@ -1,0 +1,17 @@
+name: 'Wolkezeug'
+description: 'Deploy managed resources to AWS via manifest'
+inputs:
+  manifest-file:  
+    description: 'yml file for deploy meta'
+    required: true
+    default: 'deployment.yml'
+  deploy-env:  
+    description: 'envt for overrides'
+    required: true
+    default: 'nonprod'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.manifest-yml }}
+    - ${{ inputs.deploy-env }}

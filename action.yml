@@ -4,17 +4,30 @@ branding:
   icon: cloud-snow
   color: blue
 inputs:
-  manifest-file:  
-    description: 'yml file for deploy meta'
-    required: true
-    default: 'deployment.yml'
   deploy-env:  
     description: 'envt for overrides'
     required: true
     default: 'nonprod'
+  aws-region:  
+    description: 'region'
+    required: true
+    default: 'US-EAST-1'
+  timeout:  
+    description: 'wait for service stability'
+    required: true
+    default: '5'
+  artifact:  
+    description: 'artifact name'
+    required: false
+  version:  
+    description: 'wait for service stability'
+    required: false
 runs:
   using: 'docker'
   image: 'docker://lonewolfworks/wolkezeug:${{ github.ref }}'
   args:
-    - ${{ inputs.manifest-file }}
     - ${{ inputs.deploy-env }}
+    - ${{ inputs.aws-region }}
+    - ${{ inputs.timeout }}
+    - ${{ inputs.artifact }}
+    - ${{ inputs.version }}

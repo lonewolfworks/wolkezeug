@@ -23,9 +23,9 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
       - name: Build with Maven
-        run: mvn --batch-mode clean test package shade:shade
-      - name: docker build
-        run: docker build .
+        run: mvn --batch-mode clean test package shade:shade docker:build
+#      - name: docker build
+#        run: docker build .
   push:
     runs-on: ubuntu-latest
     environment: release

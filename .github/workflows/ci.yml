@@ -12,15 +12,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+      - name: docker build
+        run: docker build .
+  push:
+    runs-on: ubuntu-latest
     environment: release
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v2
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: printenv
       - name: Log into registry 
         if: github.event_name != 'pull_request'
         uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c

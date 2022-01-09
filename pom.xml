@@ -270,8 +270,8 @@
 				</dependencies>
 
 				<configuration>
-					<imageName>lonewolfworks/${project.artifactId}:latest</imageName>
-					<dockerDirectory>src/main/docker</dockerDirectory>
+					<imageName>lonewolfworks/${project.artifactId}:${project.version}</imageName>
+					<dockerDirectory>.</dockerDirectory>
 					<resources>
 						<resource>
 							<targetPath>/</targetPath>
@@ -286,12 +286,12 @@
 
 	
 	
-			<plugin>
+			<!-- <plugin>
 				<groupId>org.owasp</groupId>
 				<artifactId>dependency-check-maven</artifactId>
 				<version>5.3.1</version>
 				<configuration>
-					<!-- <failBuildOnCVSS>8</failBuildOnCVSS> -->
+					<failBuildOnCVSS>8</failBuildOnCVSS>
 					<skipProvidedScope>true</skipProvidedScope>
 					<formats>HTML,XML</formats>
 				</configuration>
@@ -305,7 +305,7 @@
 				</executions>
 			</plugin>
 
-
+-->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>

@@ -1,5 +1,11 @@
-#!/bin/sh -l
-
-echo "Hello $1"
-echo "World $2"
+#!/bin/bash
 printenv
+
+java -jar wolkezeug.jar ecs-push \
+			-e $DEPLOY_ENV \
+		    -t $TIMEOUT \
+    		-v bamboo.maven.artifactId=$ARTIFACT \
+    		-v bamboo.maven.version=$VERSION \
+    		-v aws.region=$REGION \
+    		-v bamboo.planRepository.revision=$PLANREVISION \
+    		-v bamboo.deploy.version=$VERSION

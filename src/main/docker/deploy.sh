@@ -1,5 +1,5 @@
 #!/bin/bash
-java -jar herman.jar ecs-push \
+java -jar wolkezeug.jar ecs-push \
 			-e $DEPLOY_ENV \
 		    -t $TIMEOUT \
     		-v bamboo.maven.artifactId=$ARTIFACT \

@@ -11,7 +11,7 @@ inputs:
   aws-region:  
     description: 'region'
     required: true
-    default: 'US-EAST-1'
+    default: 'us-east-1'
   timeout:  
     description: 'wait for service stability'
     required: true

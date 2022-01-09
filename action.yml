@@ -22,12 +22,17 @@ inputs:
   version:  
     description: 'wait for service stability'
     required: false
+  path:  
+    description: 'file loc'
+    required: false
+    default: '/'
 runs:
   using: 'docker'
-  image: 'docker://lonewolfworks/wolkezeug:${{ github.ref }}'
+  image: 'docker://lonewolfworks/wolkezeug:BETA-0.0.22'
   args:
     - ${{ inputs.deploy-env }}
     - ${{ inputs.aws-region }}
     - ${{ inputs.timeout }}
     - ${{ inputs.artifact }}
     - ${{ inputs.version }}
+    - ${{ inputs.path }}

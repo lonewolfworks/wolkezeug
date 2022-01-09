@@ -1,7 +1,9 @@
 #!/bin/bash
 printenv
+cd $6
 
-java -jar wolkezeug.jar ecs-push \
+ls -alh 
+java -jar /wolkezeug.jar ecs-push \
 			-e $1 \
 		    -t $3 \
     		-v bamboo.maven.artifactId=$4 \

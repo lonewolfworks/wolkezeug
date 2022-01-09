@@ -20,17 +20,17 @@ jobs:
       # Runs a single command using the runners shell
       - name: Run a one-line script
         run: printenv
-#      - name: Log into registry 
-#        if: github.event_name != 'pull_request'
-#        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
-#        with:
-#          username: lonewolfworks
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Log into registry 
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          username: lonewolfworks
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: login
-        env:
-          TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: docker login --username lonewolfworks --password `$TOKEN`
+#      - name: login
+ #       env:
+  #        TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+   #     run: docker login --username lonewolfworks --password `$TOKEN`
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc

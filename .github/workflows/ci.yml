@@ -26,26 +26,3 @@ jobs:
         run: mvn versions:set -DnewVersion=BETA-0.0.${{ github.run_number }}
       - name: Build with Maven
         run: mvn --batch-mode clean test package shade:shade docker:build
-#      - name: docker build
-#        run: docker build .
-  push:
-    runs-on: ubuntu-latest
-    environment: release
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v2
-      - name: Log into registry 
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
-        with:
-          username: lonewolfworks
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: lonewolfworks/wolkezeug:BETA-0.0.${{ github.run_number }}

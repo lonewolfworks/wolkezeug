@@ -29,6 +29,6 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
       - name: Build with Maven
-        run: mvn versions:set -DnewVersion=BETA-0.1.${{ github.run_number }}
+        run: mvn versions:set -DnewVersion=${{ github.ref}}
       - name: Build with Maven
         run: mvn --batch-mode clean test package shade:shade docker:build docker:push

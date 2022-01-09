@@ -9,12 +9,7 @@
 	<artifactId>wolkezeug</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 
-	<organization>
-		<name>Liberty Mutual</name>
-		<url>http://www.libertymutual.com/</url>
-	</organization>
-
-	<name>herman</name>
+	<name>wolkezeug</name>
 	
 
 	<properties>

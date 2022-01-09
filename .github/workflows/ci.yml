@@ -1,4 +1,5 @@
 name: CI
+
 on:
   push:
     branches: [ main ]
@@ -11,29 +12,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: nonprod
     permissions:
       id-token: write
       contents: read
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: arn:aws:iam::658544419615:role/deploy-nonprod
-          aws-region: us-east-1
-
-
-     - name: Log into registry 
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
-        with:
-          username: lonewolfworks
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: lonewolfworks/wolkezeug:BETA-0.0.${{ github.run_number }}
+      # Runs a single command using the runners shell
+      - name: Run a one-line script
+        run: printenv

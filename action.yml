@@ -14,7 +14,7 @@ inputs:
     default: 'nonprod'
 runs:
   using: 'docker'
-  image: 'docker://lonewolfworks/wolkezeug:BETA-0.0.16'
+  image: 'docker://lonewolfworks/wolkezeug:${{ github.ref }}'
   args:
     - ${{ inputs.manifest-file }}
     - ${{ inputs.deploy-env }}

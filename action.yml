@@ -16,5 +16,5 @@ runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
-    - ${{ inputs.manifest-yml }}
+    - ${{ inputs.manifest-file }}
     - ${{ inputs.deploy-env }}

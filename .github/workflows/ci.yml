@@ -12,6 +12,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: nonprod
     permissions:
       id-token: write
       contents: read

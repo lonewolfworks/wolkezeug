@@ -41,31 +41,16 @@ public class ECSPushTaskProperties extends CommonTaskProperties {
     private List<String> externalElbSecurityGroups = new ArrayList<>();
     private S3BrokerProperties s3;
     private Auth0BrokerProperties auth0;
+   
+	private List<String> publicExternalSubnets = new ArrayList<>();
+    private List<String> publicInternalSubnets = new ArrayList<>();
+    private List<String> privateSubnets = new ArrayList<>();
+    
+    private String vpcId;
 
     //typically only need one logging bucket
-    private String logsBucket;
-    //Allow overrides to accomodate non-standard/clumsy LFG setup
-    private String s3LogsBucket;
-    private String elbLogsBucket;
-    
-    
-    public String getS3LogsBucket() {
-		return s3LogsBucket;
-	}
-
-	public void setS3LogsBucket(String s3LogsBucket) {
-		this.s3LogsBucket = s3LogsBucket;
-	}
-
-	public String getElbLogsBucket() {
-		return elbLogsBucket;
-	}
-
-	public void setElbLogsBucket(String elbLogsBucket) {
-		this.elbLogsBucket = elbLogsBucket;
-	}
-
-
+    private String logsBucket;    
+   
     @Override
     public ECSPushTaskProperties withCompany(final String company) {
         setCompany(company);
@@ -109,6 +94,22 @@ public class ECSPushTaskProperties extends CommonTaskProperties {
     public List<SSLCertificate> getSslCertificates() {
         return sslCertificates;
     }
+    
+    public void setPublicExternalSubnets(List<String> publicExternalSubnets) {
+		this.publicExternalSubnets = publicExternalSubnets;
+	}
+
+	public void setPublicInternalSubnets(List<String> publicInternalSubnets) {
+		this.publicInternalSubnets = publicInternalSubnets;
+	}
+
+	public void setPrivateSubnets(List<String> privateSubnets) {
+		this.privateSubnets = privateSubnets;
+	}
+
+	public void setVpcId(String vpcId) {
+		this.vpcId = vpcId;
+	}
 
     public void setSslCertificates(
             List<SSLCertificate> sslCertificates) {
@@ -166,6 +167,23 @@ public class ECSPushTaskProperties extends CommonTaskProperties {
     public String getLogsBucket() {
         return logsBucket;
     }
+    
+    public List<String> getPublicExternalSubnets() {
+		return publicExternalSubnets;
+	}
+
+	public List<String> getPublicInternalSubnets() {
+		return publicInternalSubnets;
+	}
+
+	public List<String> getPrivateSubnets() {
+		return privateSubnets;
+	}
+
+	public String getVpcId() {
+		return vpcId;
+	}
+	
 
     public void setLogsBucket(String logsBucket) {
         this.logsBucket = logsBucket;
@@ -239,6 +257,28 @@ public class ECSPushTaskProperties extends CommonTaskProperties {
         return this;
     }
 
+    public ECSPushTaskProperties withVpcId(final String vpcId) {
+        this.vpcId = vpcId;
+        return this;
+    }
+    
+    public ECSPushTaskProperties withPublicExternalSubnets(
+            final List<String> subnets) {
+        this.publicExternalSubnets = subnets;
+        return this;
+    }
+    
+    public ECSPushTaskProperties withPublicInternalSubnets(
+            final List<String> subnets) {
+        this.publicExternalSubnets = subnets;
+        return this;
+    }
+    public ECSPushTaskProperties withPrivateSubnets(
+            final List<String> subnets) {
+        this.privateSubnets = subnets;
+        return this;
+    }
+    
     @Override
     public String toString() {
         return new StringJoiner(", ", ECSPushTaskProperties.class.getSimpleName() + "[", "]")
@@ -246,7 +286,6 @@ public class ECSPushTaskProperties extends CommonTaskProperties {
                 .add("ddosWaf=" + ddosWaf)
                 .add("sslCertificates=" + sslCertificates)
                 .add("ecsConsoleLinkPattern='" + ecsConsoleLinkPattern + "'")
-                .add("splunkInstances=" + splunkInstances)
                 .add("rdsCredentialBrokerImage='" + rdsCredentialBrokerImage + "'")
                 .add("dnsBrokerLambda='" + dnsBrokerLambda + "'")
                 .add("externalElbSecurityGroups=" + externalElbSecurityGroups)

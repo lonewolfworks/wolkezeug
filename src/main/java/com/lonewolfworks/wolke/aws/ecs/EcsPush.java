@@ -258,7 +258,11 @@ public class EcsPush {
 
         EcsClusterIntrospector clusterIntrospector = new EcsClusterIntrospector(cftClient, ec2Client, logger);
         EcsClusterMetadata clusterMetadata = clusterIntrospector.introspect(definition.getCluster(), pushContext.getRegion());
-
+        clusterMetadata.setPublicSubnets(taskProperties.getPublicExternalSubnets());
+        clusterMetadata.setElbSubnets(taskProperties.getPublicInternalSubnets());
+        clusterMetadata.setPrivateSubnets(taskProperties.getPrivateSubnets());
+        clusterMetadata.setVpcId(taskProperties.getVpcId());
+        
         LoggingService loggingService = new LoggingService(logger).withSplunkInstanceValues(clusterMetadata.getSplunkUrl(), taskProperties);
 
         // Set app role

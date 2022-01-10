@@ -78,41 +78,41 @@ public class EcsClusterIntrospector {
             updateClusterMetadataWithStackParamValue(ecsClusterMetadata, stackParams);
         }
 
-        DescribeVpcsResult res = ec2Client.describeVpcs();
-
-        Vpc vpc = null;
-        for (Vpc v: res.getVpcs()) {
-            if (isProperVpc(v)) {
-                vpc = v;
-            }
-        }
-        if (vpc == null) {
-            throw new AwsExecException("Cannot find any VPC!");
-        }
-        ecsClusterMetadata.setVpcId(vpc.getVpcId());
-        List<String> elbSubnets = ecsClusterMetadata.getElbSubnets();
-        List<String> publicSubnets = ecsClusterMetadata.getPublicSubnets();
-
-        DescribeSubnetsResult sub = ec2Client.describeSubnets();
-
-        for (Subnet net: sub.getSubnets()) {
-            if (subnetMatches(vpc, net)) {
-                for (com.amazonaws.services.ec2.model.Tag t: net.getTags()) {
-                    if ("Name".equals(t.getKey())) {
-                      	//typical internal
-                        if (t.getValue().contains("private-elb")) {
-                            elbSubnets.add(net.getSubnetId());
-                        //LFG rough convention for internal
-                        } else if (t.getValue().contains("-net")) {
-                            elbSubnets.add(net.getSubnetId());
-                        //typical public-facing
-                        } else if (t.getValue().contains("public")) {
-                            publicSubnets.add(net.getSubnetId());
-                        } 
-                    }
-                }
-            }
-        }
+//        DescribeVpcsResult res = ec2Client.describeVpcs();
+//
+//        Vpc vpc = null;
+//        for (Vpc v: res.getVpcs()) {
+//            if (isProperVpc(v)) {
+//                vpc = v;
+//            }
+//        }
+//        if (vpc == null) {
+//            throw new AwsExecException("Cannot find any VPC!");
+//        }
+//        ecsClusterMetadata.setVpcId(vpc.getVpcId());
+//        List<String> elbSubnets = ecsClusterMetadata.getElbSubnets();
+//        List<String> publicSubnets = ecsClusterMetadata.getPublicSubnets();
+//
+//        DescribeSubnetsResult sub = ec2Client.describeSubnets();
+//
+//        for (Subnet net: sub.getSubnets()) {
+//            if (subnetMatches(vpc, net)) {
+//                for (com.amazonaws.services.ec2.model.Tag t: net.getTags()) {
+//                    if ("Name".equals(t.getKey())) {
+//                      	//typical internal
+//                        if (t.getValue().contains("private-elb")) {
+//                            elbSubnets.add(net.getSubnetId());
+//                        //LFG rough convention for internal
+//                        } else if (t.getValue().contains("-net")) {
+//                            elbSubnets.add(net.getSubnetId());
+//                        //typical public-facing
+//                        } else if (t.getValue().contains("public")) {
+//                            publicSubnets.add(net.getSubnetId());
+//                        } 
+//                    }
+//                }
+//            }
+//        }
 
         logger.addLogEntry("Introspection complete:");
         logger.addLogEntry(ecsClusterMetadata.toString());

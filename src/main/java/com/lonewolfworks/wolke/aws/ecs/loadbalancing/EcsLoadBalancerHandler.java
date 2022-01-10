@@ -207,7 +207,7 @@ public class EcsLoadBalancerHandler {
 
     private void resetAccessLoggingConfig(String appName) {
         AccessLog accessLog;
-        String loggingBucket = StringUtils.isNotBlank(taskProperties.getElbLogsBucket())?taskProperties.getElbLogsBucket():taskProperties.getLogsBucket();
+        String loggingBucket = StringUtils.isNotBlank(taskProperties.getLogsBucket())?taskProperties.getLogsBucket():taskProperties.getLogsBucket();
         if (StringUtils.isNotBlank(loggingBucket)) {
             buildLogger.addLogEntry(String.format("... Enabling access logging using the %s bucket", loggingBucket));
             accessLog = new AccessLog()

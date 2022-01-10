@@ -35,7 +35,7 @@ public class S3CreateTaskProperties extends CommonTaskProperties {
             .withSbu(taskProperties.getSbu())
             .withS3(taskProperties.getS3())
             .withLogsBucket(taskProperties.getLogsBucket())
-            .withS3LogsBucket(taskProperties.getS3LogsBucket())
+            .withS3LogsBucket(taskProperties.getLogsBucket())
             ;
     }
 

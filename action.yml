@@ -28,7 +28,7 @@ inputs:
     default: '/'
 runs:
   using: 'docker'
-  image: 'docker://lonewolfworks/wolkezeug:BETA-0.0.24'
+  image: 'docker://lonewolfworks/wolkezeug:BETA-0.0.25'
   args:
     - ${{ inputs.deploy-env }}
     - ${{ inputs.aws-region }}

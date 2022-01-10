@@ -32,8 +32,8 @@ jobs:
         run: mvn versions:set -DnewVersion=${{ github.ref_name}}
       - name: Build with Maven
         run: mvn --batch-mode clean test package shade:shade docker:build docker:push
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: true
-          automatic_release_tag: ${{ github.ref_name}}
+#      - uses: "marvinpinto/action-automatic-releases@latest"
+#        with:
+#          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+#          prerelease: true
+#          automatic_release_tag: ${{ github.ref_name}}

@@ -15,9 +15,11 @@
  */
 package com.lonewolfworks.wolke.aws.ecs.cluster;
 
-import com.amazonaws.services.cloudformation.model.Tag;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import com.amazonaws.services.ecs.model.Tag;
 
 public class EcsClusterMetadata {
 

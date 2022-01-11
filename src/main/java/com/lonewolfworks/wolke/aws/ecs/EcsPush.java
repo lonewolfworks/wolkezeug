@@ -256,7 +256,7 @@ public class EcsPush {
         logger.addLogEntry(definition.toString());
         logInvocationInCloudWatch(definition);
 
-        EcsClusterIntrospector clusterIntrospector = new EcsClusterIntrospector(cftClient, ec2Client, logger);
+        EcsClusterIntrospector clusterIntrospector = new EcsClusterIntrospector(ecsClient, ec2Client, rdsClient, logger);
         EcsClusterMetadata clusterMetadata = clusterIntrospector.introspect(definition.getCluster(), pushContext.getRegion());
         clusterMetadata.setPublicSubnets(taskProperties.getPublicExternalSubnets());
         clusterMetadata.setElbSubnets(taskProperties.getPublicInternalSubnets());

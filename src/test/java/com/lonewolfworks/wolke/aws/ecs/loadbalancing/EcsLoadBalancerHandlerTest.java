@@ -180,10 +180,10 @@ public class EcsLoadBalancerHandlerTest {
 
     private EcsClusterMetadata generateMetadata() {
         EcsClusterMetadata meta = mock(EcsClusterMetadata.class);
-        List<com.amazonaws.services.cloudformation.model.Tag> tags = new ArrayList<>();
-        com.amazonaws.services.cloudformation.model.Tag nameTag = new com.amazonaws.services.cloudformation.model.Tag()
+        List<com.amazonaws.services.ecs.model.Tag> tags = new ArrayList<>();
+        com.amazonaws.services.ecs.model.Tag nameTag = new com.amazonaws.services.ecs.model.Tag()
             .withKey("Name").withValue("some-cluster");
-        com.amazonaws.services.cloudformation.model.Tag otherTag = new com.amazonaws.services.cloudformation.model.Tag()
+        com.amazonaws.services.ecs.model.Tag otherTag = new com.amazonaws.services.ecs.model.Tag()
             .withKey("Org").withValue("some-org");
         tags.add(nameTag);
         tags.add(otherTag);

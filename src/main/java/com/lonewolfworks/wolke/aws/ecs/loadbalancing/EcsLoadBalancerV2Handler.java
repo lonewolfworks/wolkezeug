@@ -15,7 +15,7 @@
  */
 package com.lonewolfworks.wolke.aws.ecs.loadbalancing;
 
-import com.amazonaws.services.cloudformation.model.Tag;
+import com.amazonaws.services.ecs.model.Tag;
 import com.amazonaws.services.ecs.model.ContainerDefinition;
 import com.amazonaws.services.ecs.model.LoadBalancer;
 import com.amazonaws.services.elasticloadbalancing.model.HealthCheck;

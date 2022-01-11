@@ -15,104 +15,88 @@
  */
 package com.lonewolfworks.wolke.aws.ecs.cluster;
 
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.DescribeStackResourcesRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStackResourcesResult;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.StackResource;
-import com.amazonaws.services.cloudformation.model.Tag;
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.model.DescribeSubnetsResult;
-import com.amazonaws.services.ec2.model.DescribeVpcsResult;
-import com.amazonaws.services.ec2.model.Subnet;
-import com.amazonaws.services.ec2.model.Vpc;
-import com.lonewolfworks.wolke.aws.AwsExecException;
-import com.lonewolfworks.wolke.logging.HermanLogger;
-
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
+
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.StackResource;
+import com.amazonaws.services.ec2.AmazonEC2;
+import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
+import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
+import com.amazonaws.services.ec2.model.DescribeSecurityGroupsRequest;
+import com.amazonaws.services.ec2.model.Filter;
+import com.amazonaws.services.ec2.model.GroupIdentifier;
+import com.amazonaws.services.ec2.model.IpPermission;
+import com.amazonaws.services.ec2.model.Reservation;
+import com.amazonaws.services.ec2.model.SecurityGroup;
+import com.amazonaws.services.ecs.AmazonECS;
+import com.amazonaws.services.ecs.AmazonECSClientBuilder;
+import com.amazonaws.services.ecs.model.Cluster;
+import com.amazonaws.services.ecs.model.ContainerInstance;
+import com.amazonaws.services.ecs.model.DescribeClustersRequest;
+import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest;
+import com.amazonaws.services.ecs.model.ListContainerInstancesRequest;
+import com.amazonaws.services.rds.AmazonRDS;
+import com.amazonaws.services.rds.AmazonRDSClientBuilder;
+import com.amazonaws.services.rds.model.DBSubnetGroup;
+import com.lonewolfworks.wolke.logging.HermanLogger;
 
 public class EcsClusterIntrospector {
 
-    private AmazonCloudFormation cftClient;
+    private AmazonECS ecsClient;
     private AmazonEC2 ec2Client;
+    private AmazonRDS rdsClient;
     private HermanLogger logger;
 
-    public EcsClusterIntrospector(AmazonCloudFormation cftClient, AmazonEC2 ec2Client, HermanLogger logger) {
-        this.cftClient = cftClient;
+    public EcsClusterIntrospector(AmazonECS ecsClient, AmazonEC2 ec2Client, AmazonRDS rdsClient, HermanLogger logger) {
+        this.ecsClient = ecsClient;
         this.ec2Client = ec2Client;
+        this.rdsClient = rdsClient;
         this.logger = logger;
     }
 
     public EcsClusterMetadata introspect(String name, Regions region) {
         EcsClusterMetadata ecsClusterMetadata = new EcsClusterMetadata();
 
-        String stackName = name;
+        Cluster cluster = ecsClient.describeClusters(new DescribeClustersRequest().withClusters(name)).getClusters().get(0);
+        
+        ecsClusterMetadata.setClusterCftStackTags(cluster.getTags());
+        ecsClusterMetadata.setClusterId(name);
+        
+        
+        
+        String instArn = ecsClient.listContainerInstances(new ListContainerInstancesRequest().withCluster(name)).getContainerInstanceArns().get(0);
+        ContainerInstance inst = ecsClient.describeContainerInstances(new DescribeContainerInstancesRequest().withCluster(name).withContainerInstances(instArn)).getContainerInstances().get(0);
 
-        DescribeStackResourcesRequest req = new DescribeStackResourcesRequest()
-            .withStackName(stackName);
-        DescribeStackResourcesResult clusterStackResult;
+        Reservation r = ec2Client.describeInstances(new DescribeInstancesRequest().withInstanceIds(inst.getEc2InstanceId())).getReservations().get(0);
+        
+        ecsClusterMetadata.setClusterEcsRole(r.getInstances().get(0).getIamInstanceProfile().getArn());
+        
+        for(GroupIdentifier g : r.getInstances().get(0).getSecurityGroups()) {
+            SecurityGroup grp = ec2Client.describeSecurityGroups(new DescribeSecurityGroupsRequest().withGroupIds(g.getGroupId())).getSecurityGroups().get(0);
+            
 
-        clusterStackResult = cftClient.describeStackResources(req);
+            for(IpPermission perm : grp.getIpPermissions()) {
+                if(perm.getFromPort().equals(49153) && perm.getToPort().equals(65535)) {
+                    ecsClusterMetadata.setAppSecurityGroup(grp.getGroupId());
+       
+                    ecsClusterMetadata.getElbSecurityGroups().add(perm.getUserIdGroupPairs().get(0).getGroupId());
  
-
-        if (clusterStackResult == null) {
-            throw new AwsExecException("Unable to find cluster to introspect from stack: " + name);
+                }
+            }
         }
-
-        for (StackResource r: clusterStackResult.getStackResources()) {
-            updateClusterMetadataWithStackResourceValue(ecsClusterMetadata, r);
+        Filter f = new Filter("ip-permission.group-id").withValues( ecsClusterMetadata.getAppSecurityGroup());
+        SecurityGroup dbgrp = ec2Client.describeSecurityGroups(new DescribeSecurityGroupsRequest().withFilters(f)).getSecurityGroups().get(0);
+        ecsClusterMetadata.setRdsSecurityGroup(dbgrp.getGroupId());
+     
+        for(DBSubnetGroup sub : rdsClient.describeDBSubnetGroups().getDBSubnetGroups()) {
+            if(sub.getVpcId().equals(ecsClusterMetadata.getVpcId()) && sub.getDBSubnetGroupName().contains(ecsClusterMetadata.getClusterId())) {
+                ecsClusterMetadata.setDbSubnetGroup(sub.getDBSubnetGroupName());
+            }
         }
-
-        DescribeStacksResult stackResult = cftClient.describeStacks(new DescribeStacksRequest().withStackName(stackName));
-        List<Tag> clusterCftStackTags = stackResult.getStacks().get(0).getTags();
-        ecsClusterMetadata.setClusterCftStackTags(clusterCftStackTags);
-
-        Iterator<Parameter> stackParams = stackResult.getStacks().get(0).getParameters().iterator();
-        while (stackParams.hasNext()) {
-            updateClusterMetadataWithStackParamValue(ecsClusterMetadata, stackParams);
-        }
-
-//        DescribeVpcsResult res = ec2Client.describeVpcs();
-//
-//        Vpc vpc = null;
-//        for (Vpc v: res.getVpcs()) {
-//            if (isProperVpc(v)) {
-//                vpc = v;
-//            }
-//        }
-//        if (vpc == null) {
-//            throw new AwsExecException("Cannot find any VPC!");
-//        }
-//        ecsClusterMetadata.setVpcId(vpc.getVpcId());
-//        List<String> elbSubnets = ecsClusterMetadata.getElbSubnets();
-//        List<String> publicSubnets = ecsClusterMetadata.getPublicSubnets();
-//
-//        DescribeSubnetsResult sub = ec2Client.describeSubnets();
-//
-//        for (Subnet net: sub.getSubnets()) {
-//            if (subnetMatches(vpc, net)) {
-//                for (com.amazonaws.services.ec2.model.Tag t: net.getTags()) {
-//                    if ("Name".equals(t.getKey())) {
-//                      	//typical internal
-//                        if (t.getValue().contains("private-elb")) {
-//                            elbSubnets.add(net.getSubnetId());
-//                        //LFG rough convention for internal
-//                        } else if (t.getValue().contains("-net")) {
-//                            elbSubnets.add(net.getSubnetId());
-//                        //typical public-facing
-//                        } else if (t.getValue().contains("public")) {
-//                            publicSubnets.add(net.getSubnetId());
-//                        } 
-//                    }
-//                }
-//            }
-//        }
+        
+        System.out.println(ecsClusterMetadata);
 
         logger.addLogEntry("Introspection complete:");
         logger.addLogEntry(ecsClusterMetadata.toString());
@@ -159,21 +143,16 @@ public class EcsClusterIntrospector {
             ecsClusterMetadata.setClusterEcsRole(r.getPhysicalResourceId());
         }
     }
+    
+    public static void main(String...strings) {
+        AmazonECS ecs = AmazonECSClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
 
-    private boolean isProperVpc(Vpc vpc) {
-        String[] defaultIds = {"sandbox", "dev", "nonprod", "prod"};
+        AmazonEC2 ec2= AmazonEC2ClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
+        AmazonRDS rds= AmazonRDSClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
 
-        for (com.amazonaws.services.ec2.model.Tag t: vpc.getTags()) {
-            if ("Name".equals(t.getKey())
-                    && Arrays.asList(defaultIds).stream()
-                        .filter(defaultId -> t.getValue().contains(defaultId)).findAny().isPresent()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean subnetMatches(Vpc vpc, Subnet subnet) {
-        return vpc != null && subnet != null && subnet.getVpcId() != null && subnet.getVpcId().equals(vpc.getVpcId());
+        EcsClusterIntrospector i = new EcsClusterIntrospector(ecs, ec2, rds,  null);
+        
+        i.introspect("devtools-cluster-staging", Regions.US_EAST_1);
+        
     }
 }

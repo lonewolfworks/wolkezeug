@@ -105,24 +105,11 @@ public class EcsClusterIntrospector {
                 ecsClusterMetadata.setDbSubnetGroup(sub.getDBSubnetGroupName());
             }
         }
-        
-        System.out.println(ecsClusterMetadata);
 
         logger.addLogEntry("Introspection complete:");
         logger.addLogEntry(ecsClusterMetadata.toString());
         return ecsClusterMetadata;
     }
-    
-    public static void main(String...strings) {
-        AmazonECS ecs = AmazonECSClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
 
-        AmazonEC2 ec2= AmazonEC2ClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
-        AmazonRDS rds= AmazonRDSClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
-
-        EcsClusterIntrospector i = new EcsClusterIntrospector(ecs, ec2, rds,  null);
-        
-        i.introspect("sandbox-nonprod", Regions.US_EAST_1);
-        
-    }
     
 }

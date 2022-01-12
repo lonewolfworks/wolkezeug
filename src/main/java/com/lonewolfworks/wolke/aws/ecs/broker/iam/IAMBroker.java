@@ -59,20 +59,28 @@ public class IAMBroker {
         this.buildLogger = buildLogger;
     }
 
+        
+    
     public Role brokerAppRole(AmazonIdentityManagement client,
                               IamAppDefinition definition,
                               String rolePolicy,
                               String rolePath,
+                              String suffix,
                               PropertyHandler propertyHandler,
                               AWSCredentials sessionCredentials) {
-        return brokerAppRole(client, definition, rolePolicy, rolePath, propertyHandler, sessionCredentials, PushType.ECS);
+        return brokerAppRole(client, definition, rolePolicy, rolePath, suffix, propertyHandler, sessionCredentials, PushType.ECS);
     }
 
-    public Role brokerAppRole(AmazonIdentityManagement client, IamAppDefinition definition,
-                              String rolePolicy, String rolePath, PropertyHandler propertyHandler,
+    public Role brokerAppRole(AmazonIdentityManagement client, 
+    						  IamAppDefinition definition,
+                              String rolePolicy, 
+                              String rolePath, 
+                              String suffix,
+                              PropertyHandler propertyHandler,
                               AWSCredentials sessionCredentials, PushType pushType) {
-        String appName = definition.getAppName();
-        Role role = getRole(client, appName);
+    
+        String roleName = definition.getAppName()+suffix;
+        Role role = getRole(client, roleName);
 
         if (rolePath == null) {
             //Temporary, used for prior support
@@ -88,14 +96,14 @@ public class IAMBroker {
         }
 
         if (role == null) {
-            buildLogger.addLogEntry("... Creating new role: " + definition.getAppName());
+            buildLogger.addLogEntry("... Creating new role: " + roleName);
 
             CreateRoleRequest createRoleRequest = new CreateRoleRequest()
                     .withPath(rolePath)
-                    .withRoleName(definition.getAppName())
+                    .withRoleName(roleName)
                     .withAssumeRolePolicyDocument(assumePolicy);
 
-            determinePermissionBoundary(rolePath, definition.getAppName(), sessionCredentials).ifPresent(permissionBoundary -> {
+            determinePermissionBoundary(rolePath, roleName, sessionCredentials).ifPresent(permissionBoundary -> {
                 buildLogger.addLogEntry("... Adding Permission Boundary: " + permissionBoundary);
                 createRoleRequest.withPermissionsBoundary(permissionBoundary);
             });
@@ -103,15 +111,15 @@ public class IAMBroker {
             client.createRole(createRoleRequest);
 
         } else {
-            buildLogger.addLogEntry("... Using existing role: " + definition.getAppName());
+            buildLogger.addLogEntry("... Using existing role: " + roleName);
 
-            client.updateAssumeRolePolicy(new UpdateAssumeRolePolicyRequest().withRoleName(definition.getAppName()).withPolicyDocument(assumePolicy));
+            client.updateAssumeRolePolicy(new UpdateAssumeRolePolicyRequest().withRoleName(roleName).withPolicyDocument(assumePolicy));
 
-            determinePermissionBoundary(rolePath, definition.getAppName(), sessionCredentials).ifPresent(permissionBoundary -> {
+            determinePermissionBoundary(rolePath, roleName, sessionCredentials).ifPresent(permissionBoundary -> {
                 buildLogger.addLogEntry("... Adding Permission Boundary: " + permissionBoundary);
                 PutRolePermissionsBoundaryRequest boundaryRequest = new PutRolePermissionsBoundaryRequest()
                         .withPermissionsBoundary(permissionBoundary)
-                        .withRoleName(definition.getAppName());
+                        .withRoleName(roleName);
                 client.putRolePermissionsBoundary(boundaryRequest);
             });
         }
@@ -120,20 +128,20 @@ public class IAMBroker {
             buildLogger.addLogEntry("... Updating the role policy");
             String fullPolicy = propertyHandler.mapInProperties(rolePolicy);
             PutRolePolicyRequest putRolePolicyRequest = new PutRolePolicyRequest()
-                    .withPolicyName(appName + POLICY_SUFFIX)
-                    .withRoleName(appName).withPolicyDocument(fullPolicy);
+                    .withPolicyName(roleName + POLICY_SUFFIX)
+                    .withRoleName(roleName).withPolicyDocument(fullPolicy);
             client.putRolePolicy(putRolePolicyRequest);
         } else {
             try {
-                client.getRolePolicy(new GetRolePolicyRequest().withPolicyName(appName + POLICY_SUFFIX).withRoleName(appName));
-                client.deleteRolePolicy(new DeleteRolePolicyRequest().withPolicyName(appName + POLICY_SUFFIX).withRoleName(appName));
+                client.getRolePolicy(new GetRolePolicyRequest().withPolicyName(roleName + POLICY_SUFFIX).withRoleName(roleName+suffix));
+                client.deleteRolePolicy(new DeleteRolePolicyRequest().withPolicyName(roleName + POLICY_SUFFIX).withRoleName(roleName+suffix));
                 buildLogger.addLogEntry("... No policy specified. The role policy was deleted.");
             } catch (NoSuchEntityException e) {
-                LOGGER.debug("Role policy does not exist: " + appName + POLICY_SUFFIX, e);
+                LOGGER.debug("Role policy does not exist: " + roleName + POLICY_SUFFIX, e);
             }
         }
 
-        role = getRole(client, appName);
+        role = getRole(client, roleName);
         try {
             //Roles take a short bit to percolate in IAM, no real status
             Thread.sleep(10000);

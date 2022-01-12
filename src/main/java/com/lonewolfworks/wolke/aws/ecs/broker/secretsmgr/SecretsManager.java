@@ -18,6 +18,15 @@ package com.lonewolfworks.wolke.aws.ecs.broker.secretsmgr;
 public class SecretsManager {
 
     private String path;
+    private String envVarName;
+
+	public String getEnvVarName() {
+		return envVarName;
+	}
+
+	public void setEnvVarName(String envVarName) {
+		this.envVarName = envVarName;
+	}
 
 	public String getPath() {
 		return path;

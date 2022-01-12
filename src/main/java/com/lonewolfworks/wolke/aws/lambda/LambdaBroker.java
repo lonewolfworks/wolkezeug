@@ -255,7 +255,7 @@ public class LambdaBroker {
         IAMBroker iamBroker = new IAMBroker(this.buildLogger);
 
         String rolePath = taskProperties.getIamDefaultRolePath();
-        Role executionRole = iamBroker.brokerAppRole(this.iamClient, this.configuration, policy, rolePath, this.context.getBambooPropertyHandler(), credentials, this.configuration.getUseEdge() ? PushType.LAMBDAEDGE : PushType.LAMBDA);
+        Role executionRole = iamBroker.brokerAppRole(this.iamClient, this.configuration, policy, rolePath, "", this.context.getBambooPropertyHandler(), credentials, this.configuration.getUseEdge() ? PushType.LAMBDAEDGE : PushType.LAMBDA);
         this.context.getBambooPropertyHandler().addProperty("app.iam", executionRole.getArn());
 
         FunctionCode functionCode;

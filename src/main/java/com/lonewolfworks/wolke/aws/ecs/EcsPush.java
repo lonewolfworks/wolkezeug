@@ -19,8 +19,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -30,8 +32,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
 import com.amazonaws.services.cloudwatch.model.Dimension;
@@ -64,6 +64,7 @@ import com.amazonaws.services.ecs.model.RegisterTaskDefinitionRequest;
 import com.amazonaws.services.ecs.model.RegisterTaskDefinitionResult;
 import com.amazonaws.services.ecs.model.RunTaskRequest;
 import com.amazonaws.services.ecs.model.RunTaskResult;
+import com.amazonaws.services.ecs.model.Secret;
 import com.amazonaws.services.ecs.model.Service;
 import com.amazonaws.services.ecs.model.ServiceEvent;
 import com.amazonaws.services.ecs.model.StopTaskRequest;
@@ -270,7 +271,7 @@ public class EcsPush {
         Role appRole;
         if (definition.getIamRole() == null || definition.getAppName().equals(definition.getIamRole())) {
             logger.addLogEntry("Brokering role with policy " + customIamPolicyFileName);
-            appRole = iamBroker.brokerAppRole(iamClient, definition, customIamPolicy, rolePath, bambooPropertyHandler, pushContext.getSessionCredentials());
+            appRole = iamBroker.brokerAppRole(iamClient, definition, customIamPolicy, rolePath, "", bambooPropertyHandler, pushContext.getSessionCredentials());
         } else {
             logger.addLogEntry("Using existing role: " + definition.getIamRole());
             appRole = iamBroker.getRole(iamClient, definition.getIamRole());
@@ -288,6 +289,16 @@ public class EcsPush {
         injectMagic.setDefaultContainerName(definition);
 
         brokerServicesPrePush(definition, injectMagic, clusterMetadata);
+        
+        TaskDefExecRoleHandler exec = new TaskDefExecRoleHandler();
+        String taskExecRoleBody = exec.generateTaskDefIam(definition);
+        String execRoleArn = null;
+        if(taskExecRoleBody!=null) {
+        	logger.addLogEntry(taskExecRoleBody);
+            Role execRole = iamBroker.brokerAppRole(iamClient, definition, taskExecRoleBody, rolePath, "-taskexec", bambooPropertyHandler, pushContext.getSessionCredentials());
+            execRoleArn = execRole.getArn();
+            logger.addLogEntry("Exec Role arn:"+execRoleArn);
+        }
 
         EcsPortHandler portHandler = new EcsPortHandler();
         LoadBalancer bal = null;
@@ -315,7 +326,7 @@ public class EcsPush {
                 clusterMetadata.getClusterId());
 
         RegisterTaskDefinitionResult taskResult = registerTask(definition, definition.getAppName(), ecsClient,
-                clusterMetadata.getClusterId());
+                clusterMetadata.getClusterId(), execRoleArn);
 
         logger.addLogEntry("Task role: " + definition.getTaskRoleArn());
 
@@ -416,12 +427,14 @@ public class EcsPush {
     }
 
     private RegisterTaskDefinitionResult registerTask(EcsPushDefinition definition, String appName, AmazonECS ecsClient,
-                                                      String clusterId) {
+                                                      String clusterId, String executionRoleArn) {
         RegisterTaskDefinitionResult taskResult = ecsClient.registerTaskDefinition(new RegisterTaskDefinitionRequest()
                 .withFamily(appName).withContainerDefinitions(definition.getContainerDefinitions())
                 .withVolumes(definition.getVolumes()).withPlacementConstraints(definition.getTaskPlacementConstraints())
                 .withNetworkMode(definition.getNetworkMode()).withTaskRoleArn(definition.getTaskRoleArn())
-                .withMemory(definition.getTaskMemory()));
+                .withMemory(definition.getTaskMemory())
+                .withExecutionRoleArn(executionRoleArn)
+        		);
         logger.addLogEntry("Registered new task: " + taskResult.getTaskDefinition().getTaskDefinitionArn());
 
         DescribeServicesResult serviceResult = ecsClient
@@ -779,18 +792,37 @@ public class EcsPush {
     private void brokerSecretsManager(EcsPushDefinition definition, EcsClusterMetadata clusterMetadata,
                                       String kmsKeyId) {
 
-        if (definition.getSecrets() != null) {
-            List<HermanTag> tags = new ArrayList<>();
-            tags.add(new HermanTag(taskProperties.getSbuTagKey(), clusterMetadata.getNewrelicSbuTag()));
-            tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
-            tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
-            tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
-
-            String path = definition.getSecrets().getPath();
-            SecretsManagerBroker broker = new SecretsManagerBroker(logger);
-            broker.brokerSecretsManagerShell(secretsManagerClient, path, kmsKeyId, definition.getAppName(), TagUtil.hermanToSecretsManagerTags(tags));
-        }
-
+    	List<HermanTag> tags = new ArrayList<>();
+    	tags.add(new HermanTag(taskProperties.getSbuTagKey(), clusterMetadata.getNewrelicSbuTag()));
+    	tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
+    	tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
+    	tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
+//        if (definition.getSecrets() != null) {
+//
+//            for(SecretsManager sm : definition.getSecrets()) {
+//            	String path = sm.getPath();
+//            	SecretsManagerBroker broker = new SecretsManagerBroker(logger);
+//            	String arn = broker.brokerSecretsManagerShell(secretsManagerClient, path, kmsKeyId, definition.getAppName(), TagUtil.hermanToSecretsManagerTags(tags));
+//            	definition.
+//            }
+//        }
+    	Map<String, String> brokered = new HashMap();
+    	for(ContainerDefinition def : definition.getContainerDefinitions()) {
+    		for(Secret sec : def.getSecrets()) {
+    			if(sec.getValueFrom().startsWith("broker:")) {
+    				String path = sec.getValueFrom().replace("broker:", "");
+    				if(!brokered.containsKey(path)) {
+    					SecretsManagerBroker broker = new SecretsManagerBroker(logger);
+                		String arn = broker.brokerSecretsManagerShell(secretsManagerClient, path, kmsKeyId, definition.getAppName(), TagUtil.hermanToSecretsManagerTags(tags));
+                		sec.setValueFrom(arn);
+                		brokered.put(path, arn);
+                	} else {
+                		sec.setValueFrom(brokered.get(path));
+                	}
+    			}
+    		}
+    	}
+//    	return brokered;
     }
 
     private String brokerKms(EcsPushDefinition definition, EcsClusterMetadata clusterMetadata) {
@@ -799,8 +831,6 @@ public class EcsPush {
                 this.pushContext.getRegion());
 
         List<HermanTag> tags = new ArrayList<>();
-        tags.add(new HermanTag(taskProperties.getSbuTagKey(), clusterMetadata.getNewrelicSbuTag()));
-        tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
         tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
         tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
 

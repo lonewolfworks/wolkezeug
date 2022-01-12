@@ -15,8 +15,17 @@
  */
 package com.lonewolfworks.wolke.aws.ecs.broker.kms;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.regions.Regions;
+import com.amazonaws.services.ecs.model.ContainerDefinition;
+import com.amazonaws.services.ecs.model.Secret;
 import com.amazonaws.services.kms.AWSKMS;
 import com.amazonaws.services.kms.model.AWSKMSException;
 import com.amazonaws.services.kms.model.AliasListEntry;
@@ -48,12 +57,6 @@ import com.lonewolfworks.wolke.logging.HermanLogger;
 import com.lonewolfworks.wolke.task.common.CommonTaskProperties;
 import com.lonewolfworks.wolke.util.ConfigurationUtil;
 import com.lonewolfworks.wolke.util.FileUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 
 public class KmsBroker {
 
@@ -81,7 +84,20 @@ public class KmsBroker {
     }
 
     public boolean isActive(EcsPushDefinition definition) {
-        return Boolean.TRUE.toString().equals(definition.getUseKms()) || definition.getDatabase() != null;
+        boolean result = Boolean.TRUE.toString().equals(definition.getUseKms()) || definition.getDatabase() != null;
+        if(result) {
+        	return result;
+        } else {
+        	//also check for secrets
+        	for(ContainerDefinition d : definition.getContainerDefinitions()) {
+        		for(Secret s : d.getSecrets()){
+        			if(s.getValueFrom().startsWith("broker:")){
+        				return true;
+        			}
+        		}
+        	}
+        }
+        return false;
     }
 
     public String brokerKey(AWSKMS client, KmsAppDefinition definition, List<Tag> tags) {

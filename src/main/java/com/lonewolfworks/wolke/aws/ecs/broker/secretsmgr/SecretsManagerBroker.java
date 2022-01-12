@@ -38,7 +38,7 @@ public class SecretsManagerBroker {
 		this.hermanLogger = hermanLogger;
 	}
 
-	public void brokerSecretsManagerShell(AWSSecretsManager client, String path, String kmsKeyId, String appName, List<Tag> tags) {
+	public String brokerSecretsManagerShell(AWSSecretsManager client, String path, String kmsKeyId, String appName, List<Tag> tags) {
 		hermanLogger.addLogEntry("Brokering SecretsManager shell");
 		List<SecretListEntry> entries = client.listSecrets(new ListSecretsRequest().withMaxResults(100)).getSecretList();
 		String arn = null;
@@ -64,6 +64,7 @@ public class SecretsManagerBroker {
 					.withDescription("Secrets container for "+appName)
 					);
 		}
+		return arn;
 
 	}
 

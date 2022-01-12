@@ -15,6 +15,9 @@
  */
 package com.lonewolfworks.wolke.aws.ecs;
 
+import java.util.List;
+import java.util.StringJoiner;
+
 import com.amazonaws.services.ecs.model.ContainerDefinition;
 import com.amazonaws.services.ecs.model.KeyValuePair;
 import com.amazonaws.services.ecs.model.PlacementStrategy;
@@ -31,14 +34,10 @@ import com.lonewolfworks.wolke.aws.ecs.broker.kms.KmsAppDefinition;
 import com.lonewolfworks.wolke.aws.ecs.broker.newrelic.NewRelicConfiguration;
 import com.lonewolfworks.wolke.aws.ecs.broker.rds.RdsInstance;
 import com.lonewolfworks.wolke.aws.ecs.broker.s3.S3Bucket;
-import com.lonewolfworks.wolke.aws.ecs.broker.secretsmgr.SecretsManager;
 import com.lonewolfworks.wolke.aws.ecs.broker.sns.SnsTopic;
 import com.lonewolfworks.wolke.aws.ecs.broker.sqs.SqsQueue;
 import com.lonewolfworks.wolke.aws.ecs.service.EcsService;
 import com.lonewolfworks.wolke.aws.tags.HermanTag;
-
-import java.util.List;
-import java.util.StringJoiner;
 
 public class EcsPushDefinition implements IamAppDefinition, KmsAppDefinition, DynamoAppDefinition, KinesisAppDefinition {
 
@@ -74,17 +73,17 @@ public class EcsPushDefinition implements IamAppDefinition, KmsAppDefinition, Dy
     private String albTimeout;
     private List<Ulimit> ulimits;
     private String waf;
-    private SecretsManager secrets;
+    //private List<SecretsManager> secrets;
 
     
     
-    public SecretsManager getSecrets() {
-		return secrets;
-	}
-
-	public void setSecrets(SecretsManager secrets) {
-		this.secrets = secrets;
-	}
+//    public List<SecretsManager> getSecrets() {
+//		return secrets;
+//	}
+//
+//	public void setSecrets(List<SecretsManager> secrets) {
+//		this.secrets = secrets;
+//	}
 
 	public String getNewRelicApplicationName() {
         String newRelicApplicationName = null;

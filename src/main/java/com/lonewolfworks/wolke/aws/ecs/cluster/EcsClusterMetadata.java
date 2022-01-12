@@ -31,7 +31,6 @@ public class EcsClusterMetadata {
     private List<String> publicSubnets = new ArrayList<>();
     private List<String> privateSubnets = new ArrayList<>();
     private List<Tag> clusterCftStackTags;
-    private String encryptionKey;
     private String dbSubnetGroup;
     private String newrelicOrgTag;
     private String newrelicSbuTag;
@@ -104,14 +103,6 @@ public class EcsClusterMetadata {
         this.clusterCftStackTags = clusterCftStackTags;
     }
 
-    public String getEncryptionKey() {
-        return encryptionKey;
-    }
-
-    public void setEncryptionKey(String encryptionKey) {
-        this.encryptionKey = encryptionKey;
-    }
-
     public String getDbSubnetGroup() {
         return dbSubnetGroup;
     }
@@ -179,7 +170,6 @@ public class EcsClusterMetadata {
             ", publicSubnets=" + publicSubnets +
             ", privateSubnets=" + privateSubnets +
             ", clusterCftStackTags=" + clusterCftStackTags +
-            ", encryptionKey='" + encryptionKey + '\'' +
             ", dbSubnetGroup='" + dbSubnetGroup + '\'' +
             ", newrelicOrgTag='" + newrelicOrgTag + '\'' +
             ", newrelicSbuTag='" + newrelicSbuTag + '\'' +

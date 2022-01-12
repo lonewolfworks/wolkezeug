@@ -147,7 +147,6 @@ public class EcsPush {
     private AmazonEC2 ec2Client;
     private com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancing elbClient;
     private com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancing elbV2Client;
-    private AmazonCloudFormation cftClient;
     private AmazonS3 s3Client;
     private AmazonKinesis kinesisClient;
     private AmazonRDS rdsClient;
@@ -184,10 +183,6 @@ public class EcsPush {
 
         this.elbV2Client = com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancingClientBuilder
                 .standard().withCredentials(new AWSStaticCredentialsProvider(context.getSessionCredentials()))
-                .withClientConfiguration(context.getAwsClientConfig()).withRegion(context.getRegion()).build();
-
-        this.cftClient = AmazonCloudFormationClientBuilder.standard()
-                .withCredentials(new AWSStaticCredentialsProvider(context.getSessionCredentials()))
                 .withClientConfiguration(context.getAwsClientConfig()).withRegion(context.getRegion()).build();
 
         this.s3Client = AmazonS3ClientBuilder.standard()
@@ -765,10 +760,6 @@ public class EcsPush {
     private void brokerAuth0(EcsPushDefinition definition, EcsDefaultEnvInjection injectMagic,
                              EcsClusterMetadata clusterMetadata, String applicationKeyId) {
         if (definition.getAuth0() != null) {
-            String targetKey = clusterMetadata.getEncryptionKey();
-            if (Boolean.TRUE.toString().equals(definition.getUseKms())) {
-                targetKey = applicationKeyId;
-            }
 
             Auth0BrokerConfiguration auth0BrokerConfiguration = new Auth0BrokerConfiguration()
                     .withBrokerProperties(taskProperties.getAuth0());
@@ -776,7 +767,7 @@ public class EcsPush {
                     lambdaClient, auth0BrokerConfiguration);
             Auth0Broker auth0Broker = new Auth0Broker(auth0CreateContext);
             Auth0Configuration auth0Configuration = auth0Broker.brokerAuth0ApplicationDeploymentFromEcsPush(definition,
-                    kmsClient, targetKey);
+                    kmsClient, applicationKeyId);
 
             if (auth0Configuration != null) {
                 logger.addLogEntry("Injecting Auth0 Configuration values as environment variables");
@@ -825,12 +816,9 @@ public class EcsPush {
 
     private void brokerRds(EcsPushDefinition definition, EcsDefaultEnvInjection injectMagic,
                            EcsClusterMetadata clusterMetadata, String applicationKeyId) {
-        String targetKey = clusterMetadata.getEncryptionKey();
-        if (Boolean.TRUE.toString().equals(definition.getUseKms())) {
-            targetKey = applicationKeyId;
-        }
+ 
 
-        RdsBroker rdsBroker = new RdsBroker(pushContext, rdsClient, kmsClient, targetKey, definition, clusterMetadata,
+        RdsBroker rdsBroker = new RdsBroker(pushContext, rdsClient, kmsClient, applicationKeyId, definition, clusterMetadata,
                 new EcsPushFactory(), fileUtil);
 
         if (definition.getDatabase() != null) {

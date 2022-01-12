@@ -18,7 +18,7 @@
 		<amps.version>6.2.11</amps.version>
 		<plugin.testrunner.version>2.0.1</plugin.testrunner.version>
 		<atlassian.spring.scanner.version>2.2.0</atlassian.spring.scanner.version>
-		<aws-sdk.version>1.11.964</aws-sdk.version>
+		<aws-sdk.version>1.12.129</aws-sdk.version>
 		<spring.framework.version>5.2.6.RELEASE</spring.framework.version>
 		<!-- This key is used to keep the consistency between the key in atlassian-plugin.xml 
 			and the key to generate bundle. -->

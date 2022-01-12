@@ -15,12 +15,10 @@
  */
 package com.lonewolfworks.wolke.aws.ecs.cluster;
 
-import java.util.Arrays;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.StackResource;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
@@ -37,6 +35,9 @@ import com.amazonaws.services.ecs.model.ContainerInstance;
 import com.amazonaws.services.ecs.model.DescribeClustersRequest;
 import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest;
 import com.amazonaws.services.ecs.model.ListContainerInstancesRequest;
+import com.amazonaws.services.ecs.model.ListTagsForResourceRequest;
+import com.amazonaws.services.ecs.model.ListTagsForResourceResult;
+import com.amazonaws.services.ecs.model.Tag;
 import com.amazonaws.services.rds.AmazonRDS;
 import com.amazonaws.services.rds.AmazonRDSClientBuilder;
 import com.amazonaws.services.rds.model.DBSubnetGroup;
@@ -61,7 +62,16 @@ public class EcsClusterIntrospector {
 
         Cluster cluster = ecsClient.describeClusters(new DescribeClustersRequest().withClusters(name)).getClusters().get(0);
         
-        ecsClusterMetadata.setClusterCftStackTags(cluster.getTags());
+        //BUG in 1.* api
+        ListTagsForResourceRequest tagRequest = new ListTagsForResourceRequest().withResourceArn(cluster.getClusterArn());
+        ListTagsForResourceResult tagResult = ecsClient.listTagsForResource(tagRequest);
+        List<Tag> result = new ArrayList();
+        for(Tag t: tagResult.getTags()) {
+        	if(!t.getKey().startsWith("aws")) {
+        		result.add(t);
+        	}
+        }
+        ecsClusterMetadata.setClusterCftStackTags(result);
         ecsClusterMetadata.setClusterId(name);
         
         
@@ -91,7 +101,7 @@ public class EcsClusterIntrospector {
         ecsClusterMetadata.setRdsSecurityGroup(dbgrp.getGroupId());
      
         for(DBSubnetGroup sub : rdsClient.describeDBSubnetGroups().getDBSubnetGroups()) {
-            if(sub.getVpcId().equals(ecsClusterMetadata.getVpcId()) && sub.getDBSubnetGroupName().contains(ecsClusterMetadata.getClusterId())) {
+			if (sub.getDBSubnetGroupName().contains(ecsClusterMetadata.getClusterId())) {
                 ecsClusterMetadata.setDbSubnetGroup(sub.getDBSubnetGroupName());
             }
         }
@@ -102,4 +112,17 @@ public class EcsClusterIntrospector {
         logger.addLogEntry(ecsClusterMetadata.toString());
         return ecsClusterMetadata;
     }
+    
+    public static void main(String...strings) {
+        AmazonECS ecs = AmazonECSClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
+
+        AmazonEC2 ec2= AmazonEC2ClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
+        AmazonRDS rds= AmazonRDSClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
+
+        EcsClusterIntrospector i = new EcsClusterIntrospector(ecs, ec2, rds,  null);
+        
+        i.introspect("sandbox-nonprod", Regions.US_EAST_1);
+        
+    }
+    
 }

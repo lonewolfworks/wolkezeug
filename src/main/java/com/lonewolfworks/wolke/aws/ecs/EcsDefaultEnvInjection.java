@@ -15,13 +15,21 @@
  */
 package com.lonewolfworks.wolke.aws.ecs;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+
 import com.amazonaws.services.ecs.model.ContainerDefinition;
 import com.amazonaws.services.ecs.model.KeyValuePair;
+import com.amazonaws.services.ecs.model.Secret;
 import com.lonewolfworks.wolke.aws.ecs.broker.auth0.Auth0Configuration;
 import com.lonewolfworks.wolke.aws.ecs.broker.rds.RdsInstance;
+import com.lonewolfworks.wolke.aws.ecs.broker.secretsmgr.SecretsManagerBroker;
 import com.lonewolfworks.wolke.aws.ecs.cluster.EcsClusterMetadata;
-
-import java.util.List;
+import com.lonewolfworks.wolke.aws.tags.HermanTag;
+import com.lonewolfworks.wolke.aws.tags.TagUtil;
 
 public class EcsDefaultEnvInjection {
 
@@ -58,47 +66,50 @@ public class EcsDefaultEnvInjection {
 
     }
 
-    public void injectRds(EcsPushDefinition definition, RdsInstance rds) {
-        for (ContainerDefinition def : definition.getContainerDefinitions()) {
-            def.getEnvironment().add(new KeyValuePair().withName(rds.getInjectNames().getHost())
-                    .withValue(rds.getEndpoint().getAddress()));
+    public void injectRds(EcsPushDefinition definition, RdsInstance rds, SecretsManagerBroker broker) {
+    	Map<String, String> paramMap = new HashMap();
+    	paramMap.put("host", rds.getEndpoint().getAddress());
+    	paramMap.put("port", rds.getEndpoint().getPort().toString());
+    	paramMap.put("dbName", rds.getDBName());
+    	paramMap.put("connectionString", rds.getConnectionString());
+    	paramMap.put("dbiResourceId", rds.getDbiResourceId());
+    	paramMap.put("masterUsername", rds.getMasterUsername());
+    	paramMap.put("appUsename", rds.getAppUsername());
+    	paramMap.put("adminUsername", rds.getAdminUsername());
+    	
+    	Map<String, String> secretMap = new HashMap();
+//    	secretMap.put("masterPassword", rds.getMasterPassword());
+    	secretMap.put("adminPassword", rds.getAdminPassword());
+    	secretMap.put("appPassword", rds.getAdminPassword());
 
-            def.getEnvironment().add(new KeyValuePair().withName(rds.getInjectNames().getPort())
-                    .withValue(rds.getEndpoint().getPort().toString()));
-
-            def.getEnvironment()
-                    .add(new KeyValuePair().withName(rds.getInjectNames().getDb()).withValue(rds.getDBName()));
-
-            def.getEnvironment().add(new KeyValuePair().withName(rds.getInjectNames().getConnectionString())
-                    .withValue(rds.getConnectionString()));
-
-            def.getEnvironment().add(new KeyValuePair().withName(rds.getInjectNames().getDbResourceId())
-                    .withValue(rds.getDbiResourceId()));
-
-            // liquibase apps likely need spring.datasource.url AND liquibase.url set
-            if (rds.getInjectNames().getAdminUsername().toLowerCase().startsWith("liquibase")) {
-                def.getEnvironment()
-                        .add(new KeyValuePair().withName("liquibase.url").withValue(rds.getConnectionString()));
-            }
-
-            def.getEnvironment().add(
-                    new KeyValuePair().withName(rds.getInjectNames().getUsername()).withValue(rds.getMasterUsername()));
-
-            def.getEnvironment().add(new KeyValuePair().withName(rds.getInjectNames().getEncryptedPassword())
-                    .withValue(rds.getEncryptedPassword()));
-
-            def.getEnvironment().add(
-                    new KeyValuePair().withName(rds.getInjectNames().getAppUsername()).withValue(rds.getAppUsername()));
-
-            def.getEnvironment().add(new KeyValuePair().withName(rds.getInjectNames().getAppEncryptedPassword())
-                    .withValue(rds.getAppEncryptedPassword()));
-
-            def.getEnvironment().add(new KeyValuePair().withName(rds.getInjectNames().getAdminUsername())
-                    .withValue(rds.getAdminUsername()));
-
-            def.getEnvironment().add(new KeyValuePair().withName(rds.getInjectNames().getAdminEncryptedPassword())
-                    .withValue(rds.getAdminEncryptedPassword()));
+    	
+    	for (ContainerDefinition def : definition.getContainerDefinitions()) {
+    		for(KeyValuePair val : def.getEnvironment()) {
+    			if(val.getValue().contains("${rdsbroker:")) {
+    				String rdsKey = StringUtils.substringBetween(val.getValue(), "${rdsbroker:", "}");
+    				String currentVal = val.getValue();
+    				
+    				val.setValue(currentVal.replace("${rdsbroker:"+rdsKey+"}", paramMap.get(rdsKey)));
+    			}
+    		}
         }
+    	
+    	for (ContainerDefinition def : definition.getContainerDefinitions()) {
+    		for(Secret sec : def.getSecrets()) {
+    			if(sec.getValueFrom().startsWith("rdsbroker:")) {
+    				//rdsbroker:/some/path:appUsername
+    				String rdsKey = sec.getValueFrom().split(":")[2];
+    				String path = sec.getValueFrom().split(":")[1];
+    	   				
+    				
+    				//TODO broker with value
+    				String arn = broker.brokerSecretsManagerShellWithValue(path, definition.getAppName(), secretMap.get(rdsKey));
+            		sec.setValueFrom(arn);
+    			}
+    		}
+        }
+    	
+    	
     }
 
     public void injectAuth0(EcsPushDefinition definition, Auth0Configuration auth0Configuration) {

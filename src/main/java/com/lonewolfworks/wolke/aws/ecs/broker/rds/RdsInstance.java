@@ -26,12 +26,12 @@ import java.util.StringJoiner;
 public class RdsInstance extends DBInstance {
 
     private transient RdsInjectConfiguration injectNames;
-    private String encryptedPassword;
-    private String appUsername;
-    private String appEncryptedPassword;
+    private String masterPassword;
+   	private String appUsername;
+    private String appPassword;
     private String adminUsername;
-    private String adminEncryptedPassword;
-    private String credPrefix;
+    private String adminPassword;
+//    private String credPrefix;
     private Boolean fullUpdate;
     private String[] availabilityZones;
     private String optionGroupFile;
@@ -55,6 +55,31 @@ public class RdsInstance extends DBInstance {
                 + "?useSSL=true&requireSSL=true&verifyServerCertificate=false";
     }
 
+    
+    public String getMasterPassword() {
+		return masterPassword;
+	}
+
+	public void setMasterPassword(String masterPassword) {
+		this.masterPassword = masterPassword;
+	}
+
+	public String getAppPassword() {
+		return appPassword;
+	}
+
+	public void setAppPassword(String appPassword) {
+		this.appPassword = appPassword;
+	}
+
+	public String getAdminPassword() {
+		return adminPassword;
+	}
+
+	public void setAdminPassword(String adminPassword) {
+		this.adminPassword = adminPassword;
+	}
+
     public RdsInjectConfiguration getInjectNames() {
         return injectNames;
     }
@@ -63,13 +88,13 @@ public class RdsInstance extends DBInstance {
         this.injectNames = injectNames;
     }
 
-    public String getEncryptedPassword() {
-        return encryptedPassword;
-    }
-
-    public void setEncryptedPassword(String encryptedPassword) {
-        this.encryptedPassword = encryptedPassword;
-    }
+//    public String getEncryptedPassword() {
+//        return encryptedPassword;
+//    }
+//
+//    public void setEncryptedPassword(String encryptedPassword) {
+//        this.encryptedPassword = encryptedPassword;
+//    }
 
     public String getAppUsername() {
         return appUsername;
@@ -79,13 +104,13 @@ public class RdsInstance extends DBInstance {
         this.appUsername = appUsername;
     }
 
-    public String getAppEncryptedPassword() {
-        return appEncryptedPassword;
-    }
-
-    public void setAppEncryptedPassword(String appEncryptedPassword) {
-        this.appEncryptedPassword = appEncryptedPassword;
-    }
+//    public String getAppEncryptedPassword() {
+//        return appEncryptedPassword;
+//    }
+//
+//    public void setAppEncryptedPassword(String appEncryptedPassword) {
+//        this.appEncryptedPassword = appEncryptedPassword;
+//    }
 
     public String getAdminUsername() {
         return adminUsername;
@@ -95,21 +120,21 @@ public class RdsInstance extends DBInstance {
         this.adminUsername = adminUsername;
     }
 
-    public String getAdminEncryptedPassword() {
-        return adminEncryptedPassword;
-    }
-
-    public void setAdminEncryptedPassword(String adminEncryptedPassword) {
-        this.adminEncryptedPassword = adminEncryptedPassword;
-    }
-
-    public String getCredPrefix() {
-        return credPrefix;
-    }
-
-    public void setCredPrefix(String credPrefix) {
-        this.credPrefix = credPrefix;
-    }
+//    public String getAdminEncryptedPassword() {
+//        return adminEncryptedPassword;
+//    }
+//
+//    public void setAdminEncryptedPassword(String adminEncryptedPassword) {
+//        this.adminEncryptedPassword = adminEncryptedPassword;
+//    }
+//
+//    public String getCredPrefix() {
+//        return credPrefix;
+//    }
+//
+//    public void setCredPrefix(String credPrefix) {
+//        this.credPrefix = credPrefix;
+//    }
 
     public Boolean getFullUpdate() {
         return fullUpdate;
@@ -181,35 +206,35 @@ public class RdsInstance extends DBInstance {
         return this;
     }
 
-    public RdsInstance withEncryptedPassword(final String encryptedPassword) {
-        this.encryptedPassword = encryptedPassword;
-        return this;
-    }
+//    public RdsInstance withEncryptedPassword(final String encryptedPassword) {
+//        this.encryptedPassword = encryptedPassword;
+//        return this;
+//    }
 
     public RdsInstance withAppUsername(final String appUsername) {
         this.appUsername = appUsername;
         return this;
     }
 
-    public RdsInstance withAppEncryptedPassword(final String appEncryptedPassword) {
-        this.appEncryptedPassword = appEncryptedPassword;
-        return this;
-    }
+//    public RdsInstance withAppEncryptedPassword(final String appEncryptedPassword) {
+//        this.appEncryptedPassword = appEncryptedPassword;
+//        return this;
+//    }
 
     public RdsInstance withAdminUsername(final String adminUsername) {
         this.adminUsername = adminUsername;
         return this;
     }
 
-    public RdsInstance withAdminEncryptedPassword(final String adminEncryptedPassword) {
-        this.adminEncryptedPassword = adminEncryptedPassword;
-        return this;
-    }
-
-    public RdsInstance withCredPrefix(final String credPrefix) {
-        this.credPrefix = credPrefix;
-        return this;
-    }
+//    public RdsInstance withAdminEncryptedPassword(final String adminEncryptedPassword) {
+//        this.adminEncryptedPassword = adminEncryptedPassword;
+//        return this;
+//    }
+//
+//    public RdsInstance withCredPrefix(final String credPrefix) {
+//        this.credPrefix = credPrefix;
+//        return this;
+//    }
 
     public RdsInstance withFullUpdate(final Boolean fullUpdate) {
         this.fullUpdate = fullUpdate;
@@ -255,12 +280,12 @@ public class RdsInstance extends DBInstance {
     public String toString() {
         return new StringJoiner(", ", RdsInstance.class.getSimpleName() + "[", "]")
                 .add("injectNames=" + injectNames)
-                .add("encryptedPassword='" + encryptedPassword + "'")
+//                .add("encryptedPassword='" + encryptedPassword + "'")
                 .add("appUsername='" + appUsername + "'")
-                .add("appEncryptedPassword='" + appEncryptedPassword + "'")
+//                .add("appEncryptedPassword='" + appEncryptedPassword + "'")
                 .add("adminUsername='" + adminUsername + "'")
-                .add("adminEncryptedPassword='" + adminEncryptedPassword + "'")
-                .add("credPrefix='" + credPrefix + "'")
+//                .add("adminEncryptedPassword='" + adminEncryptedPassword + "'")
+//                .add("credPrefix='" + credPrefix + "'")
                 .add("fullUpdate=" + fullUpdate)
                 .add("availabilityZones=" + Arrays.toString(availabilityZones))
                 .add("optionGroupFile='" + optionGroupFile + "'")
@@ -285,12 +310,12 @@ public class RdsInstance extends DBInstance {
         return new EqualsBuilder()
                 .appendSuper(super.equals(o))
                 .append(injectNames, that.injectNames)
-                .append(encryptedPassword, that.encryptedPassword)
+//                .append(encryptedPassword, that.encryptedPassword)
                 .append(appUsername, that.appUsername)
-                .append(appEncryptedPassword, that.appEncryptedPassword)
+//                .append(appEncryptedPassword, that.appEncryptedPassword)
                 .append(adminUsername, that.adminUsername)
-                .append(adminEncryptedPassword, that.adminEncryptedPassword)
-                .append(credPrefix, that.credPrefix)
+//                .append(adminEncryptedPassword, that.adminEncryptedPassword)
+//                .append(credPrefix, that.credPrefix)
                 .append(fullUpdate, that.fullUpdate)
                 .append(availabilityZones, that.availabilityZones)
                 .append(optionGroupFile, that.optionGroupFile)
@@ -307,12 +332,12 @@ public class RdsInstance extends DBInstance {
         return new HashCodeBuilder(17, 37)
                 .appendSuper(super.hashCode())
                 .append(injectNames)
-                .append(encryptedPassword)
+//                .append(encryptedPassword)
                 .append(appUsername)
-                .append(appEncryptedPassword)
+//                .append(appEncryptedPassword)
                 .append(adminUsername)
-                .append(adminEncryptedPassword)
-                .append(credPrefix)
+//                .append(adminEncryptedPassword)
+//                .append(credPrefix)
                 .append(fullUpdate)
                 .append(availabilityZones)
                 .append(optionGroupFile)

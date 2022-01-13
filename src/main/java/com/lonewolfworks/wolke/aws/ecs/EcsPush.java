@@ -462,35 +462,35 @@ public class EcsPush {
     private TaskDefinition registerPriorTaskDefinitionWithUpdatedContainerEnvConfig(EcsPushDefinition ecsPushDefinition,
                                                                                     TaskDefinition priorTaskDef, AmazonECS ecsClient) {
         RdsInstance currentRdsInstanceDefinition = ecsPushDefinition.getDatabase();
-        if (currentRdsInstanceDefinition != null) {
-            for (ContainerDefinition containerDef : priorTaskDef.getContainerDefinitions()) {
-                containerDef.getEnvironment().replaceAll(keyValuePair -> {
-                    if (keyValuePair.getName()
-                            .equals(currentRdsInstanceDefinition.getInjectNames().getEncryptedPassword()))
-                        keyValuePair.setValue(currentRdsInstanceDefinition.getEncryptedPassword());
-                    else if (keyValuePair.getName()
-                            .equals(currentRdsInstanceDefinition.getInjectNames().getAppEncryptedPassword()))
-                        keyValuePair.setValue(currentRdsInstanceDefinition.getAppEncryptedPassword());
-                    else if (keyValuePair.getName()
-                            .equals(currentRdsInstanceDefinition.getInjectNames().getAdminEncryptedPassword()))
-                        keyValuePair.setValue(currentRdsInstanceDefinition.getAdminEncryptedPassword());
-                    return keyValuePair;
-                });
-            }
-
-            RegisterTaskDefinitionResult taskResult = ecsClient
-                    .registerTaskDefinition(new RegisterTaskDefinitionRequest().withFamily(priorTaskDef.getFamily())
-                            .withContainerDefinitions(priorTaskDef.getContainerDefinitions())
-                            .withVolumes(priorTaskDef.getVolumes())
-                            .withPlacementConstraints(priorTaskDef.getPlacementConstraints())
-                            .withNetworkMode(priorTaskDef.getNetworkMode())
-                            .withTaskRoleArn(priorTaskDef.getTaskRoleArn()).withMemory(priorTaskDef.getMemory()));
-
-            logger.addLogEntry("Registered new task definition revision of prior working version: "
-                    + taskResult.getTaskDefinition().getTaskDefinitionArn());
-
-            return taskResult.getTaskDefinition();
-        }
+//        if (currentRdsInstanceDefinition != null) {
+//            for (ContainerDefinition containerDef : priorTaskDef.getContainerDefinitions()) {
+//                containerDef.getEnvironment().replaceAll(keyValuePair -> {
+//                    if (keyValuePair.getName()
+//                            .equals(currentRdsInstanceDefinition.getInjectNames().getEncryptedPassword()))
+//                        keyValuePair.setValue(currentRdsInstanceDefinition.getEncryptedPassword());
+//                    else if (keyValuePair.getName()
+//                            .equals(currentRdsInstanceDefinition.getInjectNames().getAppEncryptedPassword()))
+//                        keyValuePair.setValue(currentRdsInstanceDefinition.getAppEncryptedPassword());
+//                    else if (keyValuePair.getName()
+//                            .equals(currentRdsInstanceDefinition.getInjectNames().getAdminEncryptedPassword()))
+//                        keyValuePair.setValue(currentRdsInstanceDefinition.getAdminEncryptedPassword());
+//                    return keyValuePair;
+//                });
+//            }
+//
+//            RegisterTaskDefinitionResult taskResult = ecsClient
+//                    .registerTaskDefinition(new RegisterTaskDefinitionRequest().withFamily(priorTaskDef.getFamily())
+//                            .withContainerDefinitions(priorTaskDef.getContainerDefinitions())
+//                            .withVolumes(priorTaskDef.getVolumes())
+//                            .withPlacementConstraints(priorTaskDef.getPlacementConstraints())
+//                            .withNetworkMode(priorTaskDef.getNetworkMode())
+//                            .withTaskRoleArn(priorTaskDef.getTaskRoleArn()).withMemory(priorTaskDef.getMemory()));
+//
+//            logger.addLogEntry("Registered new task definition revision of prior working version: "
+//                    + taskResult.getTaskDefinition().getTaskDefinitionArn());
+//
+//            return taskResult.getTaskDefinition();
+//        }
         return priorTaskDef;
 
     }
@@ -797,23 +797,15 @@ public class EcsPush {
     	tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
     	tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
     	tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
-//        if (definition.getSecrets() != null) {
-//
-//            for(SecretsManager sm : definition.getSecrets()) {
-//            	String path = sm.getPath();
-//            	SecretsManagerBroker broker = new SecretsManagerBroker(logger);
-//            	String arn = broker.brokerSecretsManagerShell(secretsManagerClient, path, kmsKeyId, definition.getAppName(), TagUtil.hermanToSecretsManagerTags(tags));
-//            	definition.
-//            }
-//        }
+
     	Map<String, String> brokered = new HashMap();
     	for(ContainerDefinition def : definition.getContainerDefinitions()) {
     		for(Secret sec : def.getSecrets()) {
-    			if(sec.getValueFrom().startsWith("broker:")) {
-    				String path = sec.getValueFrom().replace("broker:", "");
+    			if(sec.getValueFrom().startsWith("secretsbroker:")) {
+    				String path = StringUtils.substringBetween(sec.getValueFrom(), "secretsbroker:", "}");
     				if(!brokered.containsKey(path)) {
-    					SecretsManagerBroker broker = new SecretsManagerBroker(logger);
-                		String arn = broker.brokerSecretsManagerShell(secretsManagerClient, path, kmsKeyId, definition.getAppName(), TagUtil.hermanToSecretsManagerTags(tags));
+    					SecretsManagerBroker broker = new SecretsManagerBroker(logger, secretsManagerClient, kmsKeyId, TagUtil.hermanToSecretsManagerTags(tags));
+                		String arn = broker.brokerSecretsManagerShell(path, definition.getAppName());
                 		sec.setValueFrom(arn);
                 		brokered.put(path, arn);
                 	} else {
@@ -822,7 +814,21 @@ public class EcsPush {
     			}
     		}
     	}
-//    	return brokered;
+//    	for(ContainerDefinition def : definition.getContainerDefinitions()) {
+//    		for(Secret sec : def.getSecrets()) {
+//    			if(sec.getValueFrom().startsWith("${rdsbroker:")) {
+//    				String path = StringUtils.substringBetween(sec.getValueFrom(), "${secretsbroker:", "}");
+//    				if(!brokered.containsKey(path)) {
+//    					SecretsManagerBroker broker = new SecretsManagerBroker(logger);
+//                		String arn = broker.brokerSecretsManagerShell(secretsManagerClient, path, kmsKeyId, definition.getAppName(), TagUtil.hermanToSecretsManagerTags(tags));
+//                		sec.setValueFrom(arn);
+//                		brokered.put(path, arn);
+//                	} else {
+//                		sec.setValueFrom(brokered.get(path));
+//                	}
+//    			}
+//    		}
+//    	}
     }
 
     private String brokerKms(EcsPushDefinition definition, EcsClusterMetadata clusterMetadata) {
@@ -847,16 +853,22 @@ public class EcsPush {
     private void brokerRds(EcsPushDefinition definition, EcsDefaultEnvInjection injectMagic,
                            EcsClusterMetadata clusterMetadata, String applicationKeyId) {
  
-
-        RdsBroker rdsBroker = new RdsBroker(pushContext, rdsClient, kmsClient, applicationKeyId, definition, clusterMetadata,
+    	List<HermanTag> tags = new ArrayList<>();
+    	tags.add(new HermanTag(taskProperties.getSbuTagKey(), clusterMetadata.getNewrelicSbuTag()));
+    	tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
+    	tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
+    	tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
+    	
+        RdsBroker rdsBroker = new RdsBroker(pushContext, rdsClient, definition, clusterMetadata,
                 new EcsPushFactory(), fileUtil);
-
+        SecretsManagerBroker broker = new SecretsManagerBroker(logger, secretsManagerClient, applicationKeyId, TagUtil.hermanToSecretsManagerTags(tags));
+        
         if (definition.getDatabase() != null) {
             RdsInstance instance = rdsBroker.brokerDb();
 
             if (instance != null) {
                 logger.addLogEntry("Injecting RDS instance values as environment variables");
-                injectMagic.injectRds(definition, instance);
+                injectMagic.injectRds(definition, instance, broker);
             }
         }
     }

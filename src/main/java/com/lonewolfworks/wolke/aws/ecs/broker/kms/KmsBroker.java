@@ -91,7 +91,7 @@ public class KmsBroker {
         	//also check for secrets
         	for(ContainerDefinition d : definition.getContainerDefinitions()) {
         		for(Secret s : d.getSecrets()){
-        			if(s.getValueFrom().startsWith("broker:")){
+        			if(s.getValueFrom().startsWith("secretsbroker:")){
         				return true;
         			}
         		}

@@ -65,7 +65,7 @@ public class RdsBroker {
     private EcsPushFactory pushFactory;
     private FileUtil fileUtil;
 
-    public RdsBroker(EcsPushContext pushContext, AmazonRDS client, AWSKMS kmsClient, String targetKeyId,
+    public RdsBroker(EcsPushContext pushContext, AmazonRDS client,
                      EcsPushDefinition definition,
                      EcsClusterMetadata clusterMetadata, EcsPushFactory pushFactory, FileUtil fileUtil) {
         this.logger = pushContext.getLogger();
@@ -85,7 +85,7 @@ public class RdsBroker {
 
         String instanceId = rds.getDBInstanceIdentifier() != null ? rds.getDBInstanceIdentifier() : definition.getAppName();
         String masterUserPassword = this.generateRandomPassword();
-        Boolean staticPassword = rds.getAppEncryptedPassword() != null || rds.getAdminEncryptedPassword() != null;
+        Boolean staticPassword = true;//rds.getAppEncryptedPassword() != null || rds.getAdminEncryptedPassword() != null;
         List<HermanTag> tags = new ArrayList<>();
         tags.add(new HermanTag().withKey(this.pushContext.getTaskProperties().getSbuTagKey()).withValue(clusterMetadata.getNewrelicSbuTag()));
         tags.add(new HermanTag().withKey(this.pushContext.getTaskProperties().getOrgTagKey()).withValue(clusterMetadata.getNewrelicOrgTag()));
@@ -149,13 +149,14 @@ public class RdsBroker {
         rds.setDbiResourceId(rdsClient.getDbiResourceId(instanceId));
 
         if (newDb || rds.getFullUpdate() || (!rds.getIAMDatabaseAuthenticationEnabled() && !staticPassword)) {
-            encryptedPassword = rds.getEncryptedPassword() != null ? rds.getEncryptedPassword()
-                    : this.encrypt(kmsClient, targetKeyId, masterUserPassword);
-            logger.addLogEntry("Encrypted password: " + encryptedPassword);
-
-            rds.setEncryptedPassword(encryptedPassword);
-
-            rds = this.brokerCredentials(rds, encryptedPassword, kmsClient);
+        	//TODO - reenable
+//            encryptedPassword = rds.getEncryptedPassword() != null ? rds.getEncryptedPassword()
+//                    : this.encrypt(kmsClient, targetKeyId, masterUserPassword);
+//            logger.addLogEntry("Encrypted password: " + encryptedPassword);
+//
+//            rds.setEncryptedPassword(encryptedPassword);
+//
+//            rds = this.brokerCredentials(rds, encryptedPassword, kmsClient);
         }
 
         if (rds.getOptionGroupFile() != null) {
@@ -183,7 +184,7 @@ public class RdsBroker {
             }
         }
 
-        rds = injectCipherNotation(rds);
+//        rds = injectCipherNotation(rds);
 
         return rds;
     }
@@ -197,55 +198,55 @@ public class RdsBroker {
         if (instance.getEngine().equalsIgnoreCase(POSTGRES_ENGINE)
                 || instance.getEngine().equalsIgnoreCase(MYSQL_ENGINE)
                 || instance.getEngine().contains(AURORA_ENGINE)) {
-            logger.addLogEntry(String.format("Updating credentials for %s (%s) instance: %s",
-                    instance.getEngine(), instance.getEngineVersion(), instance.getEndpoint().getAddress()));
-
-            String appUsername = instance.getAppUsername() != null ? instance.getAppUsername()
-                    : getUsername(instance, "app");
-
-            String appPassword = instance.getAppEncryptedPassword() != null ? instance.getAppEncryptedPassword()
-                    : this.encrypt(awskmsClient, targetKeyId, this.generateRandomPassword());
-
-            logger.addLogEntry("... app username: " + appUsername);
-            logger.addLogEntry("... app encrypted password: " + appPassword);
-            logger.addLogEntry("... app password encrypted using KMS key: " + targetKeyId);
-
-            String adminUsername = instance.getAdminUsername() != null ? instance.getAdminUsername()
-                    : getUsername(instance, "admin");
-
-            String adminPassword = instance.getAdminEncryptedPassword() != null ? instance.getAdminEncryptedPassword()
-                    : this.encrypt(awskmsClient, targetKeyId, this.generateRandomPassword());
-
-            logger.addLogEntry("... admin username: " + adminUsername);
-            logger.addLogEntry("... admin encrypted password: " + adminPassword);
-            logger.addLogEntry("... admin password encrypted using KMS key: " + targetKeyId);
-
-            propertyHandler.addProperty("ecs.cluster", definition.getCluster());
-            propertyHandler.addProperty("DB_ENGINE", this.getCredentialBrokerProfile(instance));
-            propertyHandler.addProperty("DB_ADMIN_PASSWORD", adminPassword);
-            propertyHandler.addProperty("DB_HOST", instance.getEndpoint().getAddress());
-            propertyHandler.addProperty("DB_PORT", instance.getEndpoint().getPort().toString());
-            propertyHandler.addProperty("DB_NAME", instance.getDBName());
-            propertyHandler.addProperty("DB_USERNAME", instance.getMasterUsername());
-            propertyHandler.addProperty("DB_PASSWORD", encryptedMasterPassword);
-            propertyHandler.addProperty("DB_APP_USERNAME", appUsername);
-            propertyHandler.addProperty("DB_APP_PASSWORD", appPassword);
-            propertyHandler.addProperty("DB_ADMIN_USERNAME", adminUsername);
-            propertyHandler.addProperty("DB_ADMIN_PASSWORD", adminPassword);
-            propertyHandler.addProperty("DB_EXTENSIONS", getExtensions(instance));
-            propertyHandler.addProperty("classpathTemplate", "/brokerTemplates/rds/credential-broker.yml");
-
-            instance.setAppUsername(appUsername);
-            instance.setAdminUsername(adminUsername);
-            instance.setAppEncryptedPassword(appPassword);
-            instance.setAdminEncryptedPassword(adminPassword);
-
-            logger.addLogEntry("\n");
-            logger.addLogEntry("Running RDS credential broker to set updated IDs and passwords");
-            EcsPush push = pushFactory.createPush(pushContext);
-            push.push();
-            logger.addLogEntry("RDS credential broker task completed");
-            logger.addLogEntry("\n");
+//            logger.addLogEntry(String.format("Updating credentials for %s (%s) instance: %s",
+//                    instance.getEngine(), instance.getEngineVersion(), instance.getEndpoint().getAddress()));
+//
+//            String appUsername = instance.getAppUsername() != null ? instance.getAppUsername()
+//                    : getUsername(instance, "app");
+//
+//            String appPassword = instance.getAppEncryptedPassword() != null ? instance.getAppEncryptedPassword()
+//                    : this.encrypt(awskmsClient, targetKeyId, this.generateRandomPassword());
+//
+//            logger.addLogEntry("... app username: " + appUsername);
+//            logger.addLogEntry("... app encrypted password: " + appPassword);
+//            logger.addLogEntry("... app password encrypted using KMS key: " + targetKeyId);
+//
+//            String adminUsername = instance.getAdminUsername() != null ? instance.getAdminUsername()
+//                    : getUsername(instance, "admin");
+//
+//            String adminPassword = instance.getAdminEncryptedPassword() != null ? instance.getAdminEncryptedPassword()
+//                    : this.encrypt(awskmsClient, targetKeyId, this.generateRandomPassword());
+//
+//            logger.addLogEntry("... admin username: " + adminUsername);
+//            logger.addLogEntry("... admin encrypted password: " + adminPassword);
+//            logger.addLogEntry("... admin password encrypted using KMS key: " + targetKeyId);
+//
+//            propertyHandler.addProperty("ecs.cluster", definition.getCluster());
+//            propertyHandler.addProperty("DB_ENGINE", this.getCredentialBrokerProfile(instance));
+//            propertyHandler.addProperty("DB_ADMIN_PASSWORD", adminPassword);
+//            propertyHandler.addProperty("DB_HOST", instance.getEndpoint().getAddress());
+//            propertyHandler.addProperty("DB_PORT", instance.getEndpoint().getPort().toString());
+//            propertyHandler.addProperty("DB_NAME", instance.getDBName());
+//            propertyHandler.addProperty("DB_USERNAME", instance.getMasterUsername());
+//            propertyHandler.addProperty("DB_PASSWORD", encryptedMasterPassword);
+//            propertyHandler.addProperty("DB_APP_USERNAME", appUsername);
+//            propertyHandler.addProperty("DB_APP_PASSWORD", appPassword);
+//            propertyHandler.addProperty("DB_ADMIN_USERNAME", adminUsername);
+//            propertyHandler.addProperty("DB_ADMIN_PASSWORD", adminPassword);
+//            propertyHandler.addProperty("DB_EXTENSIONS", getExtensions(instance));
+//            propertyHandler.addProperty("classpathTemplate", "/brokerTemplates/rds/credential-broker.yml");
+//
+//            instance.setAppUsername(appUsername);
+//            instance.setAdminUsername(adminUsername);
+//            instance.setAppEncryptedPassword(appPassword);
+//            instance.setAdminEncryptedPassword(adminPassword);
+//
+//            logger.addLogEntry("\n");
+//            logger.addLogEntry("Running RDS credential broker to set updated IDs and passwords");
+//            EcsPush push = pushFactory.createPush(pushContext);
+//            push.push();
+//            logger.addLogEntry("RDS credential broker task completed");
+//            logger.addLogEntry("\n");
         }
 
         return instance;
@@ -259,45 +260,45 @@ public class RdsBroker {
         }
     }
 
-    private RdsInstance injectCipherNotation(RdsInstance instance) {
-        String appPassword = instance.getAppEncryptedPassword();
-        String adminPassword = instance.getAdminEncryptedPassword();
-        String rootPassword = instance.getEncryptedPassword();
-
-        String appPasswordVariableName = instance.getInjectNames().getAppEncryptedPassword();
-        String adminPasswordVariableName = instance.getInjectNames().getAdminEncryptedPassword();
-        String rootPasswordVariableName = instance.getInjectNames().getEncryptedPassword();
-
-        Set<String> encryptablePasswordNames = new HashSet<>(Arrays.asList("spring.datasource.password",
-                "spring_datasource_password", "spring.datasource.tomcat.password",
-                "spring_datasource_tomcat_password", "spring.liquibase.password", "spring_liquibase_password",
-                "liquibase.password", "liquibase_password", "flyway.password",
-                "flyway_password", "spring_flyway_password", "spring.flyway.password"));
-
-        if (instance.getCredPrefix() != null) {
-            appPassword = instance.getCredPrefix() + appPassword;
-            adminPassword = instance.getCredPrefix() + adminPassword;
-            rootPassword = instance.getCredPrefix() + rootPassword;
-        } else {
-            if (encryptablePasswordNames.contains(appPasswordVariableName.toLowerCase())) {
-                appPassword = CIPHER_PREFIX + appPassword;
-            }
-
-            if (encryptablePasswordNames.contains(adminPasswordVariableName.toLowerCase())) {
-                adminPassword = CIPHER_PREFIX + adminPassword;
-            }
-
-            if (encryptablePasswordNames.contains(rootPasswordVariableName.toLowerCase())) {
-                adminPassword = CIPHER_PREFIX + rootPassword;
-            }
-        }
-
-        instance.setAppEncryptedPassword(appPassword);
-        instance.setAdminEncryptedPassword(adminPassword);
-        instance.setEncryptedPassword(rootPassword);
-
-        return instance;
-    }
+//    private RdsInstance injectCipherNotation(RdsInstance instance) {
+//        String appPassword = instance.getAppEncryptedPassword();
+//        String adminPassword = instance.getAdminEncryptedPassword();
+//        String rootPassword = instance.getEncryptedPassword();
+//
+//        String appPasswordVariableName = instance.getInjectNames().getAppEncryptedPassword();
+//        String adminPasswordVariableName = instance.getInjectNames().getAdminEncryptedPassword();
+//        String rootPasswordVariableName = instance.getInjectNames().getEncryptedPassword();
+//
+//        Set<String> encryptablePasswordNames = new HashSet<>(Arrays.asList("spring.datasource.password",
+//                "spring_datasource_password", "spring.datasource.tomcat.password",
+//                "spring_datasource_tomcat_password", "spring.liquibase.password", "spring_liquibase_password",
+//                "liquibase.password", "liquibase_password", "flyway.password",
+//                "flyway_password", "spring_flyway_password", "spring.flyway.password"));
+//
+//        if (instance.getCredPrefix() != null) {
+//            appPassword = instance.getCredPrefix() + appPassword;
+//            adminPassword = instance.getCredPrefix() + adminPassword;
+//            rootPassword = instance.getCredPrefix() + rootPassword;
+//        } else {
+//            if (encryptablePasswordNames.contains(appPasswordVariableName.toLowerCase())) {
+//                appPassword = CIPHER_PREFIX + appPassword;
+//            }
+//
+//            if (encryptablePasswordNames.contains(adminPasswordVariableName.toLowerCase())) {
+//                adminPassword = CIPHER_PREFIX + adminPassword;
+//            }
+//
+//            if (encryptablePasswordNames.contains(rootPasswordVariableName.toLowerCase())) {
+//                adminPassword = CIPHER_PREFIX + rootPassword;
+//            }
+//        }
+//
+//        instance.setAppEncryptedPassword(appPassword);
+//        instance.setAdminEncryptedPassword(adminPassword);
+//        instance.setEncryptedPassword(rootPassword);
+//
+//        return instance;
+//    }
 
     private String getUsername(RdsInstance instance, String prefix) {
         String username;

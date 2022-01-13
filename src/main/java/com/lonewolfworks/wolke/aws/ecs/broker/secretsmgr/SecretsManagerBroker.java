@@ -33,12 +33,18 @@ public class SecretsManagerBroker {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SecretsManagerBroker.class);
 
 	private HermanLogger hermanLogger;
-
-	public SecretsManagerBroker(HermanLogger hermanLogger) {
+	private AWSSecretsManager client;
+	private String kmsKeyId;
+	private List<Tag> tags;
+	
+	public SecretsManagerBroker(HermanLogger hermanLogger, AWSSecretsManager client, String kmsKeyId, List<Tag> tags) {
 		this.hermanLogger = hermanLogger;
+		this.client = client;
+		this.kmsKeyId = kmsKeyId;
+		this.tags = tags;
 	}
 
-	public String brokerSecretsManagerShell(AWSSecretsManager client, String path, String kmsKeyId, String appName, List<Tag> tags) {
+	public String brokerSecretsManagerShell(String path, String appName) {
 		hermanLogger.addLogEntry("Brokering SecretsManager shell");
 		List<SecretListEntry> entries = client.listSecrets(new ListSecretsRequest().withMaxResults(100)).getSecretList();
 		String arn = null;

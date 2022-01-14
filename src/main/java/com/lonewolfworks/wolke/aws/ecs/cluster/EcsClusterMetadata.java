@@ -126,14 +126,14 @@ public class EcsClusterMetadata {
     public void setNewrelicSbuTag(String newrelicSbuTag) {
         this.newrelicSbuTag = newrelicSbuTag;
     }
-
-    public String getNewrelicLicenseKey() {
-        return newrelicLicenseKey;
-    }
-
-    public void setNewrelicLicenseKey(String newrelicLicenseKey) {
-        this.newrelicLicenseKey = newrelicLicenseKey;
-    }
+//
+//    public String getNewrelicLicenseKey() {
+//        return newrelicLicenseKey;
+//    }
+//
+//    public void setNewrelicLicenseKey(String newrelicLicenseKey) {
+//        this.newrelicLicenseKey = newrelicLicenseKey;
+//    }
 
     public String getClusterEcsRole() {
         return clusterEcsRole;

@@ -607,9 +607,9 @@ public class LambdaBroker {
     private void brokerSecretsManager(LambdaInjectConfiguration definition,
                                       String kmsKeyId) {
 
-        //        tags.add(new Tag().withTagKey(this.taskProperties.getSbuTagKey()).withTagValue(this.taskProperties.getSbu()));
-        //        tags.add(new Tag().withTagKey(this.taskProperties.getOrgTagKey()).withTagValue(this.taskProperties.getOrg()));
-        //        tags.add(new Tag().withTagKey(this.taskProperties.getAppTagKey()).withTagValue(this.configuration.getAppName()));
+//                tags.add(new Tag().withTagKey(this.taskProperties.getSbuTagKey()).withTagValue(this.taskProperties.getSbu()));
+//                tags.add(new Tag().withTagKey(this.taskProperties.getOrgTagKey()).withTagValue(this.taskProperties.getOrg()));
+//                tags.add(new Tag().withTagKey(this.taskProperties.getAppTagKey()).withTagValue(this.configuration.getAppName()));
         if (definition.getSecrets() != null) {
             List<HermanTag> tags = new ArrayList<>();
             tags.add(new HermanTag(taskProperties.getSbuTagKey(), this.taskProperties.getSbu()));
@@ -617,8 +617,8 @@ public class LambdaBroker {
             tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
 
             String path = definition.getSecrets().getPath();
-            SecretsManagerBroker broker = new SecretsManagerBroker(this.buildLogger);
-            broker.brokerSecretsManagerShell(secretsManagerClient, path, kmsKeyId, definition.getAppName(), TagUtil.hermanToSecretsManagerTags(tags));
+            SecretsManagerBroker broker = new SecretsManagerBroker(this.buildLogger, secretsManagerClient, kmsKeyId, TagUtil.hermanToSecretsManagerTags(tags));
+            broker.brokerSecretsManagerShell(path, definition.getAppName());
         }
 
     }

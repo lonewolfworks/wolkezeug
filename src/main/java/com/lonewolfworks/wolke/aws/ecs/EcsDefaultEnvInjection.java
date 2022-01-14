@@ -38,13 +38,13 @@ public class EcsDefaultEnvInjection {
 
         for (ContainerDefinition container : definition.getContainerDefinitions()) {
             inject(container, definition.getAppName(), region, deployEnv,
-                    meta.getNewrelicOrgTag(), meta.getNewrelicLicenseKey());
+                    meta.getNewrelicOrgTag());
         }
 
     }
 
     private void inject(ContainerDefinition def, String appName, String region, String deployEnv,
-                        String org, String key) {
+                        String org) {
         List<KeyValuePair> env = def.getEnvironment();
         if (!propExists(env, "NEW_RELIC_APP_NAME")) {
             def.getEnvironment()
@@ -57,10 +57,10 @@ public class EcsDefaultEnvInjection {
             def.getEnvironment().add(new KeyValuePair().withName("NEWRELIC_CONFIG_LABELS")
                     .withValue("Environment:" + deployEnv + ";Region:" + region + ";Organization:" + org + ";"));
         }
-        if (!propExists(env, "NEW_RELIC_LICENSE_KEY") && key != null) {
-            def.getEnvironment().add(new KeyValuePair().withName("NEW_RELIC_LICENSE_KEY")
-                    .withValue(key));
-        }
+//        if (!propExists(env, "NEW_RELIC_LICENSE_KEY") && key != null) {
+//            def.getEnvironment().add(new KeyValuePair().withName("NEW_RELIC_LICENSE_KEY")
+//                    .withValue(key));
+//        }
 
         def.getEnvironment().add(new KeyValuePair().withName("aws.region").withValue(region));
 
@@ -80,7 +80,7 @@ public class EcsDefaultEnvInjection {
     	Map<String, String> secretMap = new HashMap();
 //    	secretMap.put("masterPassword", rds.getMasterPassword());
     	secretMap.put("adminPassword", rds.getAdminPassword());
-    	secretMap.put("appPassword", rds.getAdminPassword());
+    	secretMap.put("appPassword", rds.getAppPassword());
 
     	
     	for (ContainerDefinition def : definition.getContainerDefinitions()) {
@@ -96,14 +96,12 @@ public class EcsDefaultEnvInjection {
     	
     	for (ContainerDefinition def : definition.getContainerDefinitions()) {
     		for(Secret sec : def.getSecrets()) {
+    			System.out.println("RDS SEC"+sec);
     			if(sec.getValueFrom().startsWith("rdsbroker:")) {
     				//rdsbroker:/some/path:appUsername
     				String rdsKey = sec.getValueFrom().split(":")[2];
     				String path = sec.getValueFrom().split(":")[1];
-    	   				
-    				
-    				//TODO broker with value
-    				String arn = broker.brokerSecretsManagerShellWithValue(path, definition.getAppName(), secretMap.get(rdsKey));
+    				String arn = broker.brokerSecretsManagerShellWithValue(path+"/"+rdsKey, definition.getAppName(), secretMap.get(rdsKey));
             		sec.setValueFrom(arn);
     			}
     		}

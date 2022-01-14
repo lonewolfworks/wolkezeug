@@ -67,9 +67,15 @@ public class EcsClusterIntrospector {
         ListTagsForResourceResult tagResult = ecsClient.listTagsForResource(tagRequest);
         List<Tag> result = new ArrayList();
         for(Tag t: tagResult.getTags()) {
-        	if(!t.getKey().startsWith("aws")) {
+        	if(t.getKey().equals("nr:org")) {
+        		logger.addLogEntry("Setting nr org:"+t.getValue());
+        		ecsClusterMetadata.setNewrelicOrgTag(t.getValue());
+        	} else if(t.getKey().startsWith("nr:sbu")) {
+        		logger.addLogEntry("Setting nr sbu:"+t.getValue());
+        		ecsClusterMetadata.setNewrelicSbuTag(t.getValue());
+        	} else if(!t.getKey().startsWith("aws")) {
         		result.add(t);
-        	}
+        	} 
         }
         ecsClusterMetadata.setClusterCftStackTags(result);
         ecsClusterMetadata.setClusterId(name);

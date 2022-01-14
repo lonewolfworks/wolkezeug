@@ -41,7 +41,10 @@ public class ECSPushTask {
             configuration.getRootPath(),
             configuration.getCustomVariables());
         final ECSPushTaskProperties taskProperties = ECSPushPropertyFactory.getTaskProperties(sessionCredentials, logger, configuration.getCustomConfigurationBucket(), configuration.getRegion(), propertyHandler);
-        propertyHandler.addProperty("herman.rdsCredentialBrokerImage", taskProperties.getRdsCredentialBrokerImage());
+        
+        if(taskProperties.getRdsCredentialBrokerImage()!=null) {
+        	propertyHandler.addProperty("herman.rdsCredentialBrokerImage", taskProperties.getRdsCredentialBrokerImage());
+        }
 
         EcsPushContext context = new EcsPushContext()
             .withLogger(logger)

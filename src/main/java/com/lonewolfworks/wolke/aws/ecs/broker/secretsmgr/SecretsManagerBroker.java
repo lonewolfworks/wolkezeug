@@ -44,8 +44,8 @@ public class SecretsManagerBroker {
 		this.tags = tags;
 	}
 
-	public String brokerSecretsManagerShell(String path, String appName) {
-		hermanLogger.addLogEntry("Brokering SecretsManager shell");
+	public String brokerSecretsManagerShellWithValue(String path, String appName, String value) {
+		hermanLogger.addLogEntry("Brokering SecretsManager shell:"+path);
 		List<SecretListEntry> entries = client.listSecrets(new ListSecretsRequest().withMaxResults(100)).getSecretList();
 		String arn = null;
 		for(SecretListEntry entry : entries) {
@@ -56,22 +56,36 @@ public class SecretsManagerBroker {
 		if(arn==null) {
 			//create new
 			hermanLogger.addLogEntry(">> None existing, creating new under "+path);
-			client.createSecret(new CreateSecretRequest()
+			CreateSecretRequest req = new CreateSecretRequest()
 					.withName(path)
 					.withKmsKeyId(kmsKeyId)
 					.withDescription("Secrets container for "+appName)
-					.withTags(tags)
-					);
+					.withTags(tags);
+			
+			if(value!=null) {
+				req.withSecretString(value);
+			} else {
+				req.withSecretString("----");
+			}
+			arn = client.createSecret(req).getARN();
 		} else {
 			hermanLogger.addLogEntry(">> Existing, updating "+ arn + " under "+path);
-			client.updateSecret(new UpdateSecretRequest()
+			UpdateSecretRequest req = new UpdateSecretRequest()
 					.withSecretId(arn)
 					.withKmsKeyId(kmsKeyId)
-					.withDescription("Secrets container for "+appName)
-					);
+					.withDescription("Secrets container for "+appName);
+			if(value!=null) {
+				req.withSecretString(value);
+			}
+			client.updateSecret(req);
 		}
 		return arn;
 
+	}
+	
+	public String brokerSecretsManagerShell(String path, String appName) {
+		return brokerSecretsManagerShellWithValue(path, appName, null);
+		
 	}
 
 }

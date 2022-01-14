@@ -802,7 +802,7 @@ public class EcsPush {
     	for(ContainerDefinition def : definition.getContainerDefinitions()) {
     		for(Secret sec : def.getSecrets()) {
     			if(sec.getValueFrom().startsWith("secretsbroker:")) {
-    				String path = StringUtils.substringBetween(sec.getValueFrom(), "secretsbroker:", "}");
+    				String path = sec.getValueFrom().replace("secretsbroker:", "");
     				if(!brokered.containsKey(path)) {
     					SecretsManagerBroker broker = new SecretsManagerBroker(logger, secretsManagerClient, kmsKeyId, TagUtil.hermanToSecretsManagerTags(tags));
                 		String arn = broker.brokerSecretsManagerShell(path, definition.getAppName());
@@ -941,14 +941,14 @@ public class EcsPush {
     }
 
     private void brokerServicesPostPush(EcsPushDefinition definition, EcsClusterMetadata meta) {
-        if (taskProperties.getNewRelic() != null) {
-            NewRelicBrokerConfiguration newRelicBrokerConfiguration = new NewRelicBrokerConfiguration()
-                    .withBrokerProperties(taskProperties.getNewRelic());
-            NewRelicBroker newRelicBroker = new NewRelicBroker(bambooPropertyHandler, logger, fileUtil,
-                    newRelicBrokerConfiguration, lambdaClient);
-            newRelicBroker.brokerNewRelicApplicationDeployment(definition.getNewRelic(), definition.getAppName(),
-                    definition.getNewRelicApplicationName(), meta.getNewrelicLicenseKey());
-        }
+//        if (taskProperties.getNewRelic() != null) {
+//            NewRelicBrokerConfiguration newRelicBrokerConfiguration = new NewRelicBrokerConfiguration()
+//                    .withBrokerProperties(taskProperties.getNewRelic());
+//            NewRelicBroker newRelicBroker = new NewRelicBroker(bambooPropertyHandler, logger, fileUtil,
+//                    newRelicBrokerConfiguration, lambdaClient);
+//            newRelicBroker.brokerNewRelicApplicationDeployment(definition.getNewRelic(), definition.getAppName(),
+//                    definition.getNewRelicApplicationName(), meta.getNewrelicLicenseKey());
+//        }
 
         if (definition.getBetaAutoscale() != null) {
             AutoscalingBroker asb = new AutoscalingBroker(pushContext);

@@ -1,0 +1,21 @@
+cluster: sandbox-nonprod
+appName: first-app
+containerDefinitions:
+- memory: 100
+  image: alpine
+  environment:
+  - name: SPRING_DATABASE_CONNECTION
+    value: ${rdsbroker:connectionString}  
+  secrets:
+  - name: CANTSEE
+    valueFrom:  secretsbroker:first-app/nonprod/foobar
+  - name: SPRING_DATABASE_PASSWORD
+    valueFrom:  rdsbroker:adminPassword
+database:
+  engine: postgres
+  engineVersion: 13.4
+  dbInstancePort: 3306
+  dbinstanceClass: db.t3.micro
+  dbname: sonarqube
+  adminUsername: sonaradmin
+  secretPathPrefix: first-app/nonprod/rds

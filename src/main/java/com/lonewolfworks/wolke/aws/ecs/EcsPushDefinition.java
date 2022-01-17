@@ -97,7 +97,7 @@ public class EcsPushDefinition implements IamAppDefinition, KmsAppDefinition, Dy
         return newRelicApplicationName;
     }
 
-    public List<ContainerDefinition> getContainerDefinitions() {
+	public List<ContainerDefinition> getContainerDefinitions() {
         return containerDefinitions;
     }
 

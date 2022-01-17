@@ -52,8 +52,8 @@ public class EcsDefaultEnvInjection {
         }
 
         if (!propExists(env, "newrelic.config.labels")) {
-            def.getEnvironment().add(new KeyValuePair().withName("newrelic.config.labels")
-                    .withValue("Environment:" + deployEnv + ";Region:" + region + ";Organization:" + org + ";"));
+            //def.getEnvironment().add(new KeyValuePair().withName("newrelic.config.labels")
+            //        .withValue("Environment:" + deployEnv + ";Region:" + region + ";Organization:" + org + ";"));
             def.getEnvironment().add(new KeyValuePair().withName("NEWRELIC_CONFIG_LABELS")
                     .withValue("Environment:" + deployEnv + ";Region:" + region + ";Organization:" + org + ";"));
         }
@@ -74,13 +74,12 @@ public class EcsDefaultEnvInjection {
     	paramMap.put("connectionString", rds.getConnectionString());
     	paramMap.put("dbiResourceId", rds.getDbiResourceId());
     	paramMap.put("masterUsername", rds.getMasterUsername());
-    	paramMap.put("appUsename", rds.getAppUsername());
+    	paramMap.put("appUsername", rds.getAppUsername());
     	paramMap.put("adminUsername", rds.getAdminUsername());
     	
-    	Map<String, String> secretMap = new HashMap();
-//    	secretMap.put("masterPassword", rds.getMasterPassword());
-    	secretMap.put("adminPassword", rds.getAdminPassword());
-    	secretMap.put("appPassword", rds.getAppPassword());
+//    	Map<String, String> secretMap = new HashMap();
+//    	secretMap.put("adminPassword", rds.getAdminPassword());
+//    	secretMap.put("appPassword", rds.getAppPassword());
 
     	
     	for (ContainerDefinition def : definition.getContainerDefinitions()) {
@@ -98,10 +97,11 @@ public class EcsDefaultEnvInjection {
     		for(Secret sec : def.getSecrets()) {
     			System.out.println("RDS SEC"+sec);
     			if(sec.getValueFrom().startsWith("rdsbroker:")) {
-    				//rdsbroker:/some/path:appUsername
-    				String rdsKey = sec.getValueFrom().split(":")[2];
-    				String path = sec.getValueFrom().split(":")[1];
-    				String arn = broker.brokerSecretsManagerShellWithValue(path+"/"+rdsKey, definition.getAppName(), secretMap.get(rdsKey));
+    				//rdsbroker:appUsername
+    				String rdsKey = sec.getValueFrom().split(":")[1];
+    				String path = rds.getSecretPathPrefix();
+    				//TODO should already be set...just broker arn?
+    				String arn = broker.brokerSecretsManagerShell(path+"/"+rdsKey, definition.getAppName());
             		sec.setValueFrom(arn);
     			}
     		}

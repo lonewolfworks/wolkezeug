@@ -10,11 +10,14 @@ import com.amazonaws.services.ecs.model.Secret;
 public class TaskDefExecRoleHandler {
 	
 	public String generateTaskDefIam(EcsPushDefinition definition) {
+	
 		//check for secrets
 		Set<String> secArns = new HashSet();
 		for(ContainerDefinition def : definition.getContainerDefinitions()) {
     		for(Secret sec : def.getSecrets()) {
-    			secArns.add(sec.getValueFrom());
+    			if(sec.getValueFrom().contains("arn:")){
+    				secArns.add(sec.getValueFrom());
+    			}
     		}
     	}
 		if(secArns.size()==0) {

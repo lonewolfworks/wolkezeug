@@ -15,6 +15,17 @@
  */
 package com.lonewolfworks.wolke.aws.ecs.broker.rds;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import org.joda.time.DateTime;
+import org.springframework.util.Assert;
+
 import com.amazonaws.services.kms.AWSKMS;
 import com.amazonaws.services.kms.model.EncryptRequest;
 import com.amazonaws.services.rds.AmazonRDS;
@@ -26,36 +37,22 @@ import com.lonewolfworks.wolke.aws.ecs.EcsPush;
 import com.lonewolfworks.wolke.aws.ecs.EcsPushContext;
 import com.lonewolfworks.wolke.aws.ecs.EcsPushDefinition;
 import com.lonewolfworks.wolke.aws.ecs.PropertyHandler;
+import com.lonewolfworks.wolke.aws.ecs.broker.secretsmgr.SecretsManagerBroker;
 import com.lonewolfworks.wolke.aws.ecs.cluster.EcsClusterMetadata;
 import com.lonewolfworks.wolke.aws.tags.HermanTag;
 import com.lonewolfworks.wolke.aws.tags.TagUtil;
 import com.lonewolfworks.wolke.logging.HermanLogger;
 import com.lonewolfworks.wolke.util.DateUtil;
 import com.lonewolfworks.wolke.util.FileUtil;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.joda.time.DateTime;
-import org.springframework.util.Assert;
-
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 public class RdsBroker {
 
     private static final String AURORA_ENGINE = "aurora";
     private static final String POSTGRES_ENGINE = "postgres";
     private static final String MYSQL_ENGINE = "mysql";
-    private static final String CIPHER_PREFIX = "{cipher}";
     private static final int MYSQL_MAXLENGTH = 32;
     static int pollingIntervalMs = 10000;
     private AmazonRDS client;
-    private AWSKMS kmsClient;
     private String targetKeyId;
     private EcsPushDefinition definition;
     private EcsClusterMetadata clusterMetadata;
@@ -64,20 +61,22 @@ public class RdsBroker {
     private EcsPushContext pushContext;
     private EcsPushFactory pushFactory;
     private FileUtil fileUtil;
-
-    public RdsBroker(EcsPushContext pushContext, AmazonRDS client,
+    private SecretsManagerBroker secMgrBroker;
+    private String appRole;
+    
+    public RdsBroker(EcsPushContext pushContext, AmazonRDS client, SecretsManagerBroker secMgrBroker,
                      EcsPushDefinition definition,
-                     EcsClusterMetadata clusterMetadata, EcsPushFactory pushFactory, FileUtil fileUtil) {
+                     EcsClusterMetadata clusterMetadata, EcsPushFactory pushFactory, FileUtil fileUtil, String appRole) {
         this.logger = pushContext.getLogger();
         this.propertyHandler = pushContext.getPropertyHandler();
         this.client = client;
-        this.kmsClient = kmsClient;
-        this.targetKeyId = targetKeyId;
         this.definition = definition;
         this.clusterMetadata = clusterMetadata;
         this.pushContext = pushContext;
         this.pushFactory = pushFactory;
         this.fileUtil = fileUtil;
+        this.secMgrBroker = secMgrBroker;
+        this.appRole=appRole;
     }
 
     public RdsInstance brokerDb() {
@@ -85,7 +84,7 @@ public class RdsBroker {
 
         String instanceId = rds.getDBInstanceIdentifier() != null ? rds.getDBInstanceIdentifier() : definition.getAppName();
         String masterUserPassword = this.generateRandomPassword();
-        Boolean staticPassword = true;//rds.getAppEncryptedPassword() != null || rds.getAdminEncryptedPassword() != null;
+        Boolean staticPassword = false;//rds.getAppEncryptedPassword() != null || rds.getAdminEncryptedPassword() != null;
         List<HermanTag> tags = new ArrayList<>();
         tags.add(new HermanTag().withKey(this.pushContext.getTaskProperties().getSbuTagKey()).withValue(clusterMetadata.getNewrelicSbuTag()));
         tags.add(new HermanTag().withKey(this.pushContext.getTaskProperties().getOrgTagKey()).withValue(clusterMetadata.getNewrelicOrgTag()));
@@ -100,7 +99,7 @@ public class RdsBroker {
             tags = TagUtil.mergeTags(tags, definition.getTags());
         }
 
-        String encryptedPassword;
+        //String encryptedPassword;
         RdsClient rdsClient;
 
         if (rds.getEngine().contains(AURORA_ENGINE)) {
@@ -148,7 +147,7 @@ public class RdsBroker {
         rds.setEndpoint(rdsClient.getEndpoint(instanceId));
         rds.setDbiResourceId(rdsClient.getDbiResourceId(instanceId));
 
-        if (newDb || rds.getFullUpdate() || (!rds.getIAMDatabaseAuthenticationEnabled() && !staticPassword)) {
+        if (newDb || rds.getFullUpdate() || ( !staticPassword)) { //!rds.getIAMDatabaseAuthenticationEnabled() &&
         	//TODO - reenable
 //            encryptedPassword = rds.getEncryptedPassword() != null ? rds.getEncryptedPassword()
 //                    : this.encrypt(kmsClient, targetKeyId, masterUserPassword);
@@ -156,7 +155,7 @@ public class RdsBroker {
 //
 //            rds.setEncryptedPassword(encryptedPassword);
 //
-//            rds = this.brokerCredentials(rds, encryptedPassword, kmsClient);
+              rds = this.brokerCredentials(rds, definition.getAppName(), masterUserPassword );
         }
 
         if (rds.getOptionGroupFile() != null) {
@@ -189,20 +188,30 @@ public class RdsBroker {
         return rds;
     }
 
-    private RdsInstance brokerCredentials(RdsInstance instance, String encryptedMasterPassword, AWSKMS awskmsClient) {
+    private RdsInstance brokerCredentials(RdsInstance instance, String appName, String masterPass) {
         if (propertyHandler.lookupVariable("herman.rdsCredentialBrokerImage") == null) {
-            logger.addErrorLogEntry("Missing RDS Credential Broker Image, skipping...");
+            logger.addErrorLogEntry("No RDS Credential Broker Image in config, skipping...");
             return instance;
         }
+        
+        String adminArn = null;
+        String appArn = null;
+        String masterArn = null;
+        masterArn = secMgrBroker.brokerSecretsManagerShellWithValue(instance.getSecretPathPrefix()+"/masterPassword", appName, masterPass);
 
+        if(!instance.getIAMDatabaseAuthenticationEnabled()) {
+        	adminArn = secMgrBroker.brokerSecretsManagerShellWithValue(instance.getSecretPathPrefix()+"/adminPassword", appName, this.generateRandomPassword());
+        	appArn =  secMgrBroker.brokerSecretsManagerShellWithValue(instance.getSecretPathPrefix()+"/appPassword", appName, this.generateRandomPassword());
+        }
+        
         if (instance.getEngine().equalsIgnoreCase(POSTGRES_ENGINE)
                 || instance.getEngine().equalsIgnoreCase(MYSQL_ENGINE)
                 || instance.getEngine().contains(AURORA_ENGINE)) {
-//            logger.addLogEntry(String.format("Updating credentials for %s (%s) instance: %s",
-//                    instance.getEngine(), instance.getEngineVersion(), instance.getEndpoint().getAddress()));
-//
-//            String appUsername = instance.getAppUsername() != null ? instance.getAppUsername()
-//                    : getUsername(instance, "app");
+            logger.addLogEntry(String.format("Updating credentials for %s (%s) instance: %s",
+                    instance.getEngine(), instance.getEngineVersion(), instance.getEndpoint().getAddress()));
+
+            String appUsername = instance.getAppUsername() != null ? instance.getAppUsername()
+                    : getUsername(instance, "app");
 //
 //            String appPassword = instance.getAppEncryptedPassword() != null ? instance.getAppEncryptedPassword()
 //                    : this.encrypt(awskmsClient, targetKeyId, this.generateRandomPassword());
@@ -211,8 +220,8 @@ public class RdsBroker {
 //            logger.addLogEntry("... app encrypted password: " + appPassword);
 //            logger.addLogEntry("... app password encrypted using KMS key: " + targetKeyId);
 //
-//            String adminUsername = instance.getAdminUsername() != null ? instance.getAdminUsername()
-//                    : getUsername(instance, "admin");
+            String adminUsername = instance.getAdminUsername() != null ? instance.getAdminUsername()
+                    : getUsername(instance, "admin");
 //
 //            String adminPassword = instance.getAdminEncryptedPassword() != null ? instance.getAdminEncryptedPassword()
 //                    : this.encrypt(awskmsClient, targetKeyId, this.generateRandomPassword());
@@ -221,32 +230,35 @@ public class RdsBroker {
 //            logger.addLogEntry("... admin encrypted password: " + adminPassword);
 //            logger.addLogEntry("... admin password encrypted using KMS key: " + targetKeyId);
 //
-//            propertyHandler.addProperty("ecs.cluster", definition.getCluster());
-//            propertyHandler.addProperty("DB_ENGINE", this.getCredentialBrokerProfile(instance));
-//            propertyHandler.addProperty("DB_ADMIN_PASSWORD", adminPassword);
-//            propertyHandler.addProperty("DB_HOST", instance.getEndpoint().getAddress());
-//            propertyHandler.addProperty("DB_PORT", instance.getEndpoint().getPort().toString());
-//            propertyHandler.addProperty("DB_NAME", instance.getDBName());
-//            propertyHandler.addProperty("DB_USERNAME", instance.getMasterUsername());
-//            propertyHandler.addProperty("DB_PASSWORD", encryptedMasterPassword);
-//            propertyHandler.addProperty("DB_APP_USERNAME", appUsername);
-//            propertyHandler.addProperty("DB_APP_PASSWORD", appPassword);
-//            propertyHandler.addProperty("DB_ADMIN_USERNAME", adminUsername);
-//            propertyHandler.addProperty("DB_ADMIN_PASSWORD", adminPassword);
-//            propertyHandler.addProperty("DB_EXTENSIONS", getExtensions(instance));
-//            propertyHandler.addProperty("classpathTemplate", "/brokerTemplates/rds/credential-broker.yml");
+            propertyHandler.addProperty("rdsbroker.ecs.cluster", definition.getCluster());
+            propertyHandler.addProperty("rdsbroker.app.name", appName);
+            propertyHandler.addProperty("rdsbroker.approle.iam", appRole);
+            
+            propertyHandler.addProperty("rdsbroker.DB_ENGINE", this.getCredentialBrokerProfile(instance));
+            propertyHandler.addProperty("rdsbroker.DB_ADMIN_PASS_ARN", adminArn);
+            propertyHandler.addProperty("rdsbroker.DB_HOST", instance.getEndpoint().getAddress());
+            propertyHandler.addProperty("rdsbroker.DB_PORT", instance.getEndpoint().getPort().toString());
+            propertyHandler.addProperty("rdsbroker.DB_NAME", instance.getDBName());
+            propertyHandler.addProperty("rdsbroker.DB_USERNAME", instance.getMasterUsername());
+            propertyHandler.addProperty("rdsbroker.DB_PASS_ARN", masterArn);
+            propertyHandler.addProperty("rdsbroker.DB_APP_USERNAME", appUsername);
+            propertyHandler.addProperty("rdsbroker.DB_APP_PASS_ARN", appArn);
+            propertyHandler.addProperty("rdsbroker.DB_ADMIN_USERNAME", adminUsername);
+            propertyHandler.addProperty("rdsbroker.DB_ADMIN_PASS_ARN", adminArn);
+            propertyHandler.addProperty("rdsbroker.DB_EXTENSIONS", getExtensions(instance));
+            propertyHandler.addProperty("classpathTemplate", "/brokerTemplates/rds/credential-broker.yml");
 //
 //            instance.setAppUsername(appUsername);
 //            instance.setAdminUsername(adminUsername);
 //            instance.setAppEncryptedPassword(appPassword);
 //            instance.setAdminEncryptedPassword(adminPassword);
 //
-//            logger.addLogEntry("\n");
-//            logger.addLogEntry("Running RDS credential broker to set updated IDs and passwords");
-//            EcsPush push = pushFactory.createPush(pushContext);
-//            push.push();
-//            logger.addLogEntry("RDS credential broker task completed");
-//            logger.addLogEntry("\n");
+            logger.addLogEntry("\n");
+            logger.addLogEntry("Running RDS credential broker to set updated IDs and passwords");
+            EcsPush push = pushFactory.createPush(pushContext);
+            push.push();
+            logger.addLogEntry("RDS credential broker task completed");
+            logger.addLogEntry("\n");
         }
 
         return instance;

@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.commons.io.output.DeferredFileOutputStream;
 import org.apache.commons.lang3.StringUtils;
 
 import com.amazonaws.ClientConfiguration;
@@ -250,7 +251,7 @@ public class EcsPush {
         definition.setTaskPlacementConstraints(placementConstraints);
 
         logger.addLogEntry(definition.toString());
-        logInvocationInCloudWatch(definition);
+//        logInvocationInCloudWatch(definition);
 
         EcsClusterIntrospector clusterIntrospector = new EcsClusterIntrospector(ecsClient, ec2Client, rdsClient, logger);
         EcsClusterMetadata clusterMetadata = clusterIntrospector.introspect(definition.getCluster(), pushContext.getRegion());
@@ -259,6 +260,9 @@ public class EcsPush {
         clusterMetadata.setPrivateSubnets(taskProperties.getPrivateSubnets());
         clusterMetadata.setVpcId(taskProperties.getVpcId());
         
+        TaskDefinition versionForRollback = getCurrentTaskDef(definition.getAppName(), ecsClient,
+        		clusterMetadata.getClusterId());
+
         LoggingService loggingService = new LoggingService(logger).withSplunkInstanceValues(clusterMetadata.getSplunkUrl(), taskProperties);
 
         // Set app role
@@ -288,17 +292,43 @@ public class EcsPush {
                 clusterMetadata);
         injectMagic.setDefaultContainerName(definition);
 
-        brokerServicesPrePush(definition, injectMagic, clusterMetadata);
         
+        //run once to init for KMS' handling
         TaskDefExecRoleHandler exec = new TaskDefExecRoleHandler();
         String taskExecRoleBody = exec.generateTaskDefIam(definition);
         String execRoleArn = null;
-        if(taskExecRoleBody!=null) {
+        String origAppName=definition.getAppName();
+//        if(taskExecRoleBody!=null) 
+        {
         	logger.addLogEntry(taskExecRoleBody);
-            Role execRole = iamBroker.brokerAppRole(iamClient, definition, taskExecRoleBody, rolePath, "-taskexec", bambooPropertyHandler, pushContext.getSessionCredentials());
-            execRoleArn = execRole.getArn();
-            logger.addLogEntry("Exec Role arn:"+execRoleArn);
+        	if(definition.getAppName().endsWith("-rdsbroker")) {
+        		definition.setAppName(origAppName.replace("-rdsbroker", ""));
+        	}
+        	Role execRole = iamBroker.brokerAppRole(iamClient, definition, taskExecRoleBody, rolePath, "-taskexec", bambooPropertyHandler, pushContext.getSessionCredentials());
+        	execRoleArn = execRole.getArn();
+        	logger.addLogEntry("Exec Role arn:"+execRoleArn);
         }
+        //reset
+        definition.setAppName(origAppName);
+        
+        brokerServicesPrePush(definition, versionForRollback, injectMagic, clusterMetadata, appRole);
+        
+        //rerun to fill in secrets
+        taskExecRoleBody = exec.generateTaskDefIam(definition);
+//        if(taskExecRoleBody!=null) {
+        
+        {
+        	logger.addLogEntry(taskExecRoleBody);
+        	if(definition.getAppName().endsWith("-rdsbroker")) {
+        		definition.setAppName(origAppName.replace("-rdsbroker", ""));
+        	}
+        	Role execRole = iamBroker.brokerAppRole(iamClient, definition, taskExecRoleBody, rolePath, "-taskexec", bambooPropertyHandler, pushContext.getSessionCredentials());
+        	execRoleArn = execRole.getArn();
+        	logger.addLogEntry("Exec Role arn:"+execRoleArn);
+        }
+        //reset
+        definition.setAppName(origAppName);
+
 
         EcsPortHandler portHandler = new EcsPortHandler();
         LoadBalancer bal = null;
@@ -322,8 +352,6 @@ public class EcsPush {
             }
         }
 
-        TaskDefinition versionForRollback = getCurrentTaskDef(definition.getAppName(), ecsClient,
-                clusterMetadata.getClusterId());
 
         RegisterTaskDefinitionResult taskResult = registerTask(definition, definition.getAppName(), ecsClient,
                 clusterMetadata.getClusterId(), execRoleArn);
@@ -757,15 +785,15 @@ public class EcsPush {
         }
     }
 
-    private void brokerServicesPrePush(EcsPushDefinition definition, EcsDefaultEnvInjection injectMagic,
-                                       EcsClusterMetadata clusterMetadata) {
+    private void brokerServicesPrePush(EcsPushDefinition definition, TaskDefinition versionForRollback, EcsDefaultEnvInjection injectMagic,
+                                       EcsClusterMetadata clusterMetadata, Role appRole) {
         String applicationKeyId = brokerKms(definition, clusterMetadata);
         brokerSecretsManager(definition, clusterMetadata, applicationKeyId);
         brokerSqs(definition);
         brokerSns(definition);
         brokerS3(definition, clusterMetadata, applicationKeyId);
         brokerKinesisStream(definition);
-        brokerRds(definition, injectMagic, clusterMetadata, applicationKeyId);
+        brokerRds(definition, injectMagic, clusterMetadata, applicationKeyId, appRole);
         brokerDynamoDB(definition);
         brokerAuth0(definition, injectMagic, clusterMetadata, applicationKeyId);
     }
@@ -851,7 +879,7 @@ public class EcsPush {
     }
 
     private void brokerRds(EcsPushDefinition definition, EcsDefaultEnvInjection injectMagic,
-                           EcsClusterMetadata clusterMetadata, String applicationKeyId) {
+                           EcsClusterMetadata clusterMetadata, String applicationKeyId, Role appRole) {
  
     	List<HermanTag> tags = new ArrayList<>();
     	tags.add(new HermanTag(taskProperties.getSbuTagKey(), clusterMetadata.getNewrelicSbuTag()));
@@ -859,9 +887,10 @@ public class EcsPush {
     	tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
     	tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
     	
-        RdsBroker rdsBroker = new RdsBroker(pushContext, rdsClient, definition, clusterMetadata,
-                new EcsPushFactory(), fileUtil);
-        SecretsManagerBroker broker = new SecretsManagerBroker(logger, secretsManagerClient, applicationKeyId, TagUtil.hermanToSecretsManagerTags(tags));
+    	SecretsManagerBroker broker = new SecretsManagerBroker(logger, secretsManagerClient, applicationKeyId, TagUtil.hermanToSecretsManagerTags(tags));
+    	
+        RdsBroker rdsBroker = new RdsBroker(pushContext, rdsClient, broker, definition, clusterMetadata,
+                new EcsPushFactory(), fileUtil, appRole.getRoleName());
         
         if (definition.getDatabase() != null) {
             RdsInstance instance = rdsBroker.brokerDb();
@@ -956,26 +985,26 @@ public class EcsPush {
         }
     }
 
-    private void logInvocationInCloudWatch(EcsPushDefinition definition) {
-        try {
-            MetricDatum d = new MetricDatum().withMetricName("Invocation")
-                    .withDimensions(new Dimension().withName("application").withValue(definition.getAppName()),
-                            new Dimension().withName("cluster").withValue(definition.getCluster()),
-                            new Dimension().withName("env")
-                                    .withValue(bambooPropertyHandler.lookupVariable("bamboo.deploy.environment")),
-                            new Dimension().withName("deployProject")
-                                    .withValue(bambooPropertyHandler.lookupVariable("bamboo.deploy.project")),
-                            new Dimension().withName("type")
-                                    .withValue(System.getenv("bamboo_deploy_environment") != null ? "current-jar"
-                                            : "current-plugin"),
-                            new Dimension().withName("engine").withValue(taskProperties.getEngine()))
-                    .withUnit(StandardUnit.Count).withValue(1.0).withTimestamp(new Date());
-
-            cloudWatchClient.putMetricData(new PutMetricDataRequest().withNamespace("Herman/Deploy").withMetricData(d));
-        } catch (Exception e) { // NOSONAR
-            pushContext.getLogger().addLogEntry("Error logging invocation to CW: " + e.getMessage());// nothing to do
-        }
-    }
+//    private void logInvocationInCloudWatch(EcsPushDefinition definition) {
+//        try {
+//            MetricDatum d = new MetricDatum().withMetricName("Invocation")
+//                    .withDimensions(new Dimension().withName("application").withValue(definition.getAppName()),
+//                            new Dimension().withName("cluster").withValue(definition.getCluster()),
+//                            new Dimension().withName("env")
+//                                    .withValue(bambooPropertyHandler.lookupVariable("bamboo.deploy.environment")),
+//                            new Dimension().withName("deployProject")
+//                                    .withValue(bambooPropertyHandler.lookupVariable("bamboo.deploy.project")),
+//                            new Dimension().withName("type")
+//                                    .withValue(System.getenv("bamboo_deploy_environment") != null ? "current-jar"
+//                                            : "current-plugin"),
+//                            new Dimension().withName("engine").withValue(taskProperties.getEngine()))
+//                    .withUnit(StandardUnit.Count).withValue(1.0).withTimestamp(new Date());
+//
+//            cloudWatchClient.putMetricData(new PutMetricDataRequest().withNamespace("Herman/Deploy").withMetricData(d));
+//        } catch (Exception e) { // NOSONAR
+//            pushContext.getLogger().addLogEntry("Error logging invocation to CW: " + e.getMessage());// nothing to do
+//        }
+//    }
 
 //    private void logResultInCloudWatch(EcsPushDefinition definition) {
 //        try {

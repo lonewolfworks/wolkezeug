@@ -40,6 +40,7 @@ public class RdsInstance extends DBInstance {
     private Boolean preDeployBackup;
     private List<String> extensions; // Postgres-specific (optional)
     private String dBParameterGroupName;
+    private String secretPathPrefix;
 
     public String getConnectionString() {
         String instanceType = this.getEngine().toLowerCase();
@@ -56,7 +57,17 @@ public class RdsInstance extends DBInstance {
     }
 
     
-    public String getMasterPassword() {
+    public String getSecretPathPrefix() {
+		return secretPathPrefix;
+	}
+
+
+	public void setSecretPathPrefix(String secretPathPrefix) {
+		this.secretPathPrefix = secretPathPrefix;
+	}
+
+
+	public String getMasterPassword() {
 		return masterPassword;
 	}
 

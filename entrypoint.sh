@@ -8,4 +8,5 @@ java -jar /wolkezeug.jar ecs-push \
 		    -t $3 \
     		-v app.artifactId=$4 \
     		-v app.version=$5 \
+    		-v app.environment=$1 \
     		-v aws.region=$2 

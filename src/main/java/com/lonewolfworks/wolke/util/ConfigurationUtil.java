@@ -99,7 +99,7 @@ public class ConfigurationUtil {
         if (customConfigurationBucket != null) {
             hermanConfigBucket = customConfigurationBucket;
         } else {
-            hermanConfigBucket = String.format("herman-configuration-%s-%s-%s",
+            hermanConfigBucket = String.format("wolkezeug-configuration-%s-%s-%s",
                 account,
                 region.getName(),
                 versionProperties.getProperty("version").toLowerCase());

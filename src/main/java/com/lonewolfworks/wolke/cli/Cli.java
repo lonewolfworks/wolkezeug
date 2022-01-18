@@ -43,7 +43,7 @@ import picocli.CommandLine.RunAll;
         LambdaPushCommand.class
 })
 public class Cli implements Callable<Void> {
-    private static final String CONFIG_BUCKET_TEMPLATE= "herman-configuration-<aws account #>-lts";
+    private static final String CONFIG_BUCKET_TEMPLATE= "wolkezeug-configuration-<aws account #>-lts";
 
     private SysoutLogger logger = new SysoutLogger();
 

@@ -300,7 +300,6 @@ public class EcsPush {
         String origAppName=definition.getAppName();
 //        if(taskExecRoleBody!=null) 
         {
-        	logger.addLogEntry(taskExecRoleBody);
         	if(definition.getAppName().endsWith("-rdsbroker")) {
         		definition.setAppName(origAppName.replace("-rdsbroker", ""));
         	}
@@ -318,7 +317,6 @@ public class EcsPush {
 //        if(taskExecRoleBody!=null) {
         
         {
-        	logger.addLogEntry(taskExecRoleBody);
         	if(definition.getAppName().endsWith("-rdsbroker")) {
         		definition.setAppName(origAppName.replace("-rdsbroker", ""));
         	}

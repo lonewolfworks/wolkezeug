@@ -63,7 +63,7 @@ public class KmsBroker {
     private static final Logger LOGGER = LoggerFactory.getLogger(KmsBroker.class);
 
     public static final String KMS_POLICY_JSON = "kms-policy.json";
-    private static final String PREFIX = "alias/herman/";
+    private static final String PREFIX = "alias/wolke/";
     private HermanLogger hermanLogger;
     private PropertyHandler handler;
     private FileUtil fileUtil;
@@ -115,7 +115,7 @@ public class KmsBroker {
             hermanLogger.addLogEntry("... Creating new KMS key: " + appKeyAlias);
             CreateKeyResult key = client
                 .createKey(
-                    new CreateKeyRequest().withDescription("Herman key for " + definition.getAppName()).withTags(tags));
+                    new CreateKeyRequest().withDescription("Key for " + definition.getAppName()).withTags(tags));
             CreateAliasRequest aliasReq = new CreateAliasRequest().withAliasName(appKeyAlias)
                 .withTargetKeyId(key.getKeyMetadata().getArn());
             client.createAlias(aliasReq);

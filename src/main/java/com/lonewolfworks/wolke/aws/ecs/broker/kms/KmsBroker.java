@@ -197,7 +197,7 @@ public class KmsBroker {
                     ListResourceTagsResult keyTags = client
                         .listResourceTags(new ListResourceTagsRequest().withKeyId(key.getKeyId()));
                     tags = keyTags.getTags();
-                } catch (AWSKMSException ex) {
+                } catch (Exception ex) {
                     LOGGER.debug("Error getting tags for " + key.getKeyId(), ex);
                 }
                 for (Tag t : tags) {

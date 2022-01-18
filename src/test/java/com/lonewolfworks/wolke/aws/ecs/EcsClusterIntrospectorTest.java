@@ -1,37 +1,13 @@
 package com.lonewolfworks.wolke.aws.ecs;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.when;
-
-import java.util.Arrays;
-import java.util.List;
-
 import org.junit.Before;
-import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.cloudformation.model.DescribeStackResourcesRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStackResourcesResult;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
-import com.amazonaws.services.cloudformation.model.ListStacksResult;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Stack;
-import com.amazonaws.services.cloudformation.model.StackResource;
-import com.amazonaws.services.cloudformation.model.StackSummary;
-import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.model.DescribeSubnetsResult;
-import com.amazonaws.services.ec2.model.DescribeVpcsResult;
-import com.amazonaws.services.ec2.model.Subnet;
-import com.amazonaws.services.ec2.model.Vpc;
 import com.amazonaws.services.ecs.AmazonECS;
 import com.amazonaws.services.rds.AmazonRDS;
-import com.lonewolfworks.wolke.aws.AwsExecException;
 import com.lonewolfworks.wolke.aws.ecs.cluster.EcsClusterIntrospector;
-import com.lonewolfworks.wolke.aws.ecs.cluster.EcsClusterMetadata;
 import com.lonewolfworks.wolke.logging.HermanLogger;
 import com.lonewolfworks.wolke.logging.SysoutLogger;
 

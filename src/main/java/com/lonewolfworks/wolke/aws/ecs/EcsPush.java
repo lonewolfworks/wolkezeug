@@ -28,17 +28,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.apache.commons.io.output.DeferredFileOutputStream;
 import org.apache.commons.lang3.StringUtils;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
-import com.amazonaws.services.cloudwatch.model.StandardUnit;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.ec2.AmazonEC2;
@@ -106,8 +101,6 @@ import com.lonewolfworks.wolke.aws.ecs.broker.iam.IAMBroker;
 import com.lonewolfworks.wolke.aws.ecs.broker.kinesis.KinesisBroker;
 import com.lonewolfworks.wolke.aws.ecs.broker.kinesis.KinesisStream;
 import com.lonewolfworks.wolke.aws.ecs.broker.kms.KmsBroker;
-import com.lonewolfworks.wolke.aws.ecs.broker.newrelic.NewRelicBroker;
-import com.lonewolfworks.wolke.aws.ecs.broker.newrelic.NewRelicBrokerConfiguration;
 import com.lonewolfworks.wolke.aws.ecs.broker.rds.EcsPushFactory;
 import com.lonewolfworks.wolke.aws.ecs.broker.rds.RdsBroker;
 import com.lonewolfworks.wolke.aws.ecs.broker.rds.RdsInstance;

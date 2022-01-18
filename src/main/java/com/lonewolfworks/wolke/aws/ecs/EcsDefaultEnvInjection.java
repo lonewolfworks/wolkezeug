@@ -28,8 +28,6 @@ import com.lonewolfworks.wolke.aws.ecs.broker.auth0.Auth0Configuration;
 import com.lonewolfworks.wolke.aws.ecs.broker.rds.RdsInstance;
 import com.lonewolfworks.wolke.aws.ecs.broker.secretsmgr.SecretsManagerBroker;
 import com.lonewolfworks.wolke.aws.ecs.cluster.EcsClusterMetadata;
-import com.lonewolfworks.wolke.aws.tags.HermanTag;
-import com.lonewolfworks.wolke.aws.tags.TagUtil;
 
 public class EcsDefaultEnvInjection {
 

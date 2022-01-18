@@ -20,7 +20,6 @@ import java.util.List;
 
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeSecurityGroupsRequest;
 import com.amazonaws.services.ec2.model.Filter;
@@ -29,7 +28,6 @@ import com.amazonaws.services.ec2.model.IpPermission;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.SecurityGroup;
 import com.amazonaws.services.ecs.AmazonECS;
-import com.amazonaws.services.ecs.AmazonECSClientBuilder;
 import com.amazonaws.services.ecs.model.Cluster;
 import com.amazonaws.services.ecs.model.ContainerInstance;
 import com.amazonaws.services.ecs.model.DescribeClustersRequest;
@@ -39,7 +37,6 @@ import com.amazonaws.services.ecs.model.ListTagsForResourceRequest;
 import com.amazonaws.services.ecs.model.ListTagsForResourceResult;
 import com.amazonaws.services.ecs.model.Tag;
 import com.amazonaws.services.rds.AmazonRDS;
-import com.amazonaws.services.rds.AmazonRDSClientBuilder;
 import com.amazonaws.services.rds.model.DBSubnetGroup;
 import com.lonewolfworks.wolke.logging.HermanLogger;
 

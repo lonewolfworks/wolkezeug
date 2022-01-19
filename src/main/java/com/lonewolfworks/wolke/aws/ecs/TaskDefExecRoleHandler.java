@@ -31,9 +31,9 @@ public class TaskDefExecRoleHandler {
 				
 				String root = def.getImage().split("/")[0];
 				String imageAndTag = def.getImage().split("/")[1];
-				String image = def.getImage().split(":")[0];
+				String image = imageAndTag.split(":")[0];
 				
-				String[] split = root.split(".");
+				String[] split = root.split("\\.");
 				//arn:aws:ecr:<region>:####:repository/<images>
 				containers.add("arn:aws:ecr:"+split[3]+":"+split[0]+":repository/"+image);
 			}

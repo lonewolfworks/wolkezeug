@@ -61,7 +61,7 @@ public class EcsDefaultEnvInjection {
 //        }
 
         def.getEnvironment().add(new KeyValuePair().withName("aws.region").withValue(region));
-
+        def.getEnvironment().add(new KeyValuePair().withName("AWS_REGION").withValue(region));
     }
 
     public void injectRds(EcsPushDefinition definition, RdsInstance rds, SecretsManagerBroker broker) {

@@ -52,6 +52,12 @@ public class TaskDefExecRoleHandler {
 				"    \"Statement\": [");
 		
 		StringJoiner joiner = new StringJoiner(",");
+		joiner.add("        {\n"
+		        + "            \"Action\": \"ecr:GetAuthorizationToken\",\n"
+		        + "            \"Resource\": \"*\",\n"
+		        + "            \"Effect\": \"Allow\"\n"
+		        + "        }");
+		
 		for(String s : secrets) {
 			joiner.add("        {\n" + 
 					"            \"Action\": [\n" + 

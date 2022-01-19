@@ -17,6 +17,7 @@ package com.lonewolfworks.wolke.aws.ecs.broker.secretsmgr;
 
 import java.util.List;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +66,7 @@ public class SecretsManagerBroker {
 			if(value!=null) {
 				req.withSecretString(value);
 			} else {
-				req.withSecretString("----");
+				req.withSecretString(RandomStringUtils.randomAlphanumeric(20));
 			}
 			arn = client.createSecret(req).getARN();
 		} else {

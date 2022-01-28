@@ -5,50 +5,50 @@
  */
 package com.lonewolfworks.wolke.aws.cft;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.ListStacksRequest;
-import com.amazonaws.services.cloudformation.model.ListStacksResult;
-import com.amazonaws.services.cloudformation.model.Stack;
-import com.amazonaws.services.cloudformation.model.StackSummary;
-import com.lonewolfworks.wolke.aws.AwsExecException;
-import com.lonewolfworks.wolke.logging.HermanLogger;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.lonewolfworks.wolke.aws.AwsExecException;
+import com.lonewolfworks.wolke.logging.HermanLogger;
+
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStacksRequest;
+import software.amazon.awssdk.services.cloudformation.model.ListStacksRequest;
+import software.amazon.awssdk.services.cloudformation.model.ListStacksResponse;
+import software.amazon.awssdk.services.cloudformation.model.Stack;
+import software.amazon.awssdk.services.cloudformation.model.StackSummary;
+
 public class StackUtils {
-    private AmazonCloudFormation cftClient;
+    private CloudFormationClient cftClient;
     private HermanLogger logger;
 
     private static final int POLLING_INTERVAL_MS = 10000;
 
-    public StackUtils(AmazonCloudFormation cftClient, HermanLogger logger) {
+    public StackUtils(CloudFormationClient cftClient, HermanLogger logger) {
         this.cftClient = cftClient;
         this.logger = logger;
     }
 
     public List<StackSummary> findStacksWithName(String name) {
-        ListStacksResult stacksResult = this.cftClient.listStacks();
-        ArrayList<StackSummary> allStacks = new ArrayList<>(stacksResult.getStackSummaries());
-        String nextToken = stacksResult.getNextToken();
+        ListStacksResponse stacksResult = this.cftClient.listStacks();
+        ArrayList<StackSummary> allStacks = new ArrayList<>(stacksResult.stackSummaries());
+        String nextToken = stacksResult.nextToken();
         while (nextToken != null) {
-            ListStacksRequest listRequest = new ListStacksRequest()
-                .withNextToken(nextToken);
-            ListStacksResult listStacksResult = this.cftClient.listStacks(listRequest);
-            allStacks.addAll(listStacksResult.getStackSummaries());
-            nextToken = listStacksResult.getNextToken();
+            ListStacksRequest listRequest = ListStacksRequest.builder()
+                .nextToken(nextToken).build();
+            ListStacksResponse listStacksResult = this.cftClient.listStacks(listRequest);
+            allStacks.addAll(listStacksResult.stackSummaries());
+            nextToken = listStacksResult.nextToken();
         }
 
-        List<StackSummary> filteredStacks = allStacks.stream().filter(stack -> stack.getStackName().contains(name)).distinct().collect(Collectors.toList());
+        List<StackSummary> filteredStacks = allStacks.stream().filter(stack -> stack.stackName().contains(name)).distinct().collect(Collectors.toList());
 
         return filteredStacks;
     }
 
     public void waitForCompletion(String stackName) {
-        DescribeStacksRequest wait = new DescribeStacksRequest();
-        wait.setStackName(stackName);
+        DescribeStacksRequest wait = DescribeStacksRequest.builder().stackName(stackName).build();
         Boolean completed = false;
 
         logger.addLogEntry("Waiting...");
@@ -56,7 +56,7 @@ public class StackUtils {
         // Try waiting at the start to avoid a race before the stack starts updating
         sleep();
         while (!completed) {
-            List<Stack> stacks = cftClient.describeStacks(wait).getStacks();
+            List<Stack> stacks = cftClient.describeStacks(wait).stacks();
 
             completed = reportStatusAndCheckCompletionOf(stacks);
 
@@ -82,12 +82,12 @@ public class StackUtils {
     private Boolean reportStatusAndCheckCompletionOf(List<Stack> stacks) {
         for (Stack stack: stacks) {
             reportStatusOf(stack);
-            if (stack.getStackStatus().contains("IN_PROGRESS")) {
+            if (stack.stackStatus().toString().contains("IN_PROGRESS")) {
                 return false;
             }
 
-            if (stack.getStackStatus().contains("FAILED") || stack.getStackStatus().contains("ROLLBACK")) {
-                throw new AwsExecException("CFT pushed failed - " + stack.getStackStatus());
+            if (stack.stackStatus().toString().contains("FAILED") || stack.stackStatus().toString().contains("ROLLBACK")) {
+                throw new AwsExecException("CFT pushed failed - " + stack.stackStatus());
             }
         }
         return true;
@@ -95,8 +95,8 @@ public class StackUtils {
 
     private void reportStatusOf(Stack stack) {
 
-        String status = stack.getStackStatus();
-        String reason = stack.getStackStatusReason();
+        String status = stack.stackStatus().toString();
+        String reason = stack.stackStatusReason();
         if (reason != null) {
             status += " : " + reason;
         }

@@ -5,69 +5,70 @@
  */
 package com.lonewolfworks.wolke.aws.asg;
 
-import com.amazonaws.services.autoscaling.AmazonAutoScaling;
-import com.amazonaws.services.autoscaling.model.AmazonAutoScalingException;
-import com.amazonaws.services.autoscaling.model.AutoScalingGroup;
-import com.amazonaws.services.autoscaling.model.DescribeAutoScalingGroupsRequest;
-import com.amazonaws.services.autoscaling.model.Instance;
-import com.amazonaws.services.autoscaling.model.LifecycleState;
-import com.amazonaws.services.autoscaling.model.ResumeProcessesRequest;
-import com.amazonaws.services.autoscaling.model.SetInstanceHealthRequest;
-import com.amazonaws.services.autoscaling.model.SuspendProcessesRequest;
-import com.lonewolfworks.wolke.logging.HermanLogger;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.lonewolfworks.wolke.logging.HermanLogger;
+
+import software.amazon.awssdk.services.autoscaling.AutoScalingClient;
+import software.amazon.awssdk.services.autoscaling.model.AutoScalingException;
+import software.amazon.awssdk.services.autoscaling.model.AutoScalingGroup;
+import software.amazon.awssdk.services.autoscaling.model.DescribeAutoScalingGroupsRequest;
+import software.amazon.awssdk.services.autoscaling.model.Instance;
+import software.amazon.awssdk.services.autoscaling.model.LifecycleState;
+import software.amazon.awssdk.services.autoscaling.model.ResumeProcessesRequest;
+import software.amazon.awssdk.services.autoscaling.model.SetInstanceHealthRequest;
+import software.amazon.awssdk.services.autoscaling.model.SuspendProcessesRequest;
+
 public class AutoscalingGroupHandler {
-    private AmazonAutoScaling asgClient;
+    private AutoScalingClient asgClient;
     private HermanLogger logger;
 
     private final List<String> SUSPEND_SCALING_PROCESSES = Arrays.asList("Launch", "HealthCheck", "ReplaceUnhealthy", "AZRebalance", "AlarmNotification", "ScheduledActions", "AddToLoadBalancer");
 
-    public AutoscalingGroupHandler(AmazonAutoScaling asgClient, HermanLogger logger) {
+    public AutoscalingGroupHandler(AutoScalingClient asgClient, HermanLogger logger) {
         this.asgClient = asgClient;
         this.logger = logger;
     }
 
     public void pauseScalingOperations(String asgName) {
         this.logger.addLogEntry("...Suspending Auto Scaling operations on: " + asgName);
-        SuspendProcessesRequest suspendRequest = new SuspendProcessesRequest()
-            .withAutoScalingGroupName(asgName)
-            .withScalingProcesses(SUSPEND_SCALING_PROCESSES);
+        SuspendProcessesRequest suspendRequest = SuspendProcessesRequest.builder()
+            .autoScalingGroupName(asgName)
+            .scalingProcesses(SUSPEND_SCALING_PROCESSES).build();
         try {
             this.asgClient.suspendProcesses(suspendRequest);
         }
-        catch (AmazonAutoScalingException ex) {
+        catch (AutoScalingException ex) {
             this.logger.addErrorLogEntry("Unable to suspend autoscaling operations, proceeding with update...");
         }
     }
 
     public void resumeScalingOperations(String asgName) {
         this.logger.addLogEntry("...Resuming Auto Scaling operations on: " + asgName);
-        ResumeProcessesRequest resumeRequest = new ResumeProcessesRequest()
-            .withAutoScalingGroupName(asgName);
+        ResumeProcessesRequest resumeRequest = ResumeProcessesRequest.builder()
+            .autoScalingGroupName(asgName).build();
         this.asgClient.resumeProcesses(resumeRequest);
     }
 
     public AutoScalingGroup getAsg(String asgName) {
-        DescribeAutoScalingGroupsRequest request = new DescribeAutoScalingGroupsRequest()
-            .withAutoScalingGroupNames(asgName);
-        return this.asgClient.describeAutoScalingGroups(request).getAutoScalingGroups().get(0);
+        DescribeAutoScalingGroupsRequest request = DescribeAutoScalingGroupsRequest.builder()
+            .autoScalingGroupNames(asgName).build();
+        return this.asgClient.describeAutoScalingGroups(request).autoScalingGroups().get(0);
     }
 
     public List<Instance> getAsgInstancesInService(String asgName) {
         AutoScalingGroup group = getAsg(asgName);
-        return group.getInstances().stream()
-            .filter(instance -> LifecycleState.InService.toString().equals(instance.getLifecycleState()) && "Healthy".equals(instance.getHealthStatus()))
+        return group.instances().stream()
+            .filter(instance -> LifecycleState.IN_SERVICE.toString().equals(instance.lifecycleState()) && "Healthy".equals(instance.healthStatus()))
             .collect(Collectors.toList());
     }
 
     public void setEc2Unhealthy(String instanceId) {
-        SetInstanceHealthRequest healthRequest = new SetInstanceHealthRequest()
-            .withInstanceId(instanceId)
-            .withHealthStatus("Unhealthy");
+        SetInstanceHealthRequest healthRequest = SetInstanceHealthRequest.builder()
+            .instanceId(instanceId)
+            .healthStatus("Unhealthy").build();
         this.asgClient.setInstanceHealth(healthRequest);
     }
 }

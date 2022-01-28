@@ -1,64 +1,66 @@
 package com.lonewolfworks.wolke.aws.ecs.broker.cloudwatch;
 
-import com.amazonaws.services.cloudwatchevents.AmazonCloudWatchEvents;
-import com.amazonaws.services.cloudwatchevents.model.DeleteRuleRequest;
-import com.amazonaws.services.cloudwatchevents.model.DescribeRuleRequest;
-import com.amazonaws.services.cloudwatchevents.model.DescribeRuleResult;
-import com.amazonaws.services.cloudwatchevents.model.PutRuleRequest;
-import com.amazonaws.services.cloudwatchevents.model.PutRuleResult;
-import com.amazonaws.services.cloudwatchevents.model.PutTargetsRequest;
-import com.amazonaws.services.cloudwatchevents.model.PutTargetsResult;
-import com.amazonaws.services.cloudwatchevents.model.RemoveTargetsRequest;
-import com.amazonaws.services.cloudwatchevents.model.ResourceNotFoundException;
-import com.amazonaws.services.cloudwatchevents.model.RuleState;
-import com.amazonaws.services.cloudwatchevents.model.Target;
-import com.amazonaws.services.lambda.model.GetFunctionResult;
+
 import com.lonewolfworks.wolke.aws.lambda.LambdaInjectConfiguration;
 import com.lonewolfworks.wolke.logging.HermanLogger;
+
+import software.amazon.awssdk.services.cloudwatchevents.CloudWatchEventsClient;
+import software.amazon.awssdk.services.cloudwatchevents.model.DeleteRuleRequest;
+import software.amazon.awssdk.services.cloudwatchevents.model.DescribeRuleRequest;
+import software.amazon.awssdk.services.cloudwatchevents.model.DescribeRuleResponse;
+import software.amazon.awssdk.services.cloudwatchevents.model.PutRuleRequest;
+import software.amazon.awssdk.services.cloudwatchevents.model.PutRuleResponse;
+import software.amazon.awssdk.services.cloudwatchevents.model.PutTargetsRequest;
+import software.amazon.awssdk.services.cloudwatchevents.model.PutTargetsResponse;
+import software.amazon.awssdk.services.cloudwatchevents.model.RemoveTargetsRequest;
+import software.amazon.awssdk.services.cloudwatchevents.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.cloudwatchevents.model.RuleState;
+import software.amazon.awssdk.services.cloudwatchevents.model.Target;
+import software.amazon.awssdk.services.lambda.model.GetFunctionResponse;
 
 public class CloudWatchEventsBroker {
 
     private HermanLogger buildLogger;
-    private AmazonCloudWatchEvents amazonCloudWatchEvents;
+    private CloudWatchEventsClient amazonCloudWatchEvents;
 
-    public CloudWatchEventsBroker(HermanLogger buildLogger, AmazonCloudWatchEvents amazonCloudWatchEvents) {
+    public CloudWatchEventsBroker(HermanLogger buildLogger, CloudWatchEventsClient amazonCloudWatchEvents) {
         this.buildLogger = buildLogger;
         this.amazonCloudWatchEvents = amazonCloudWatchEvents;
     }
 
-    public void brokerScheduledRule(LambdaInjectConfiguration configuration, GetFunctionResult output) {
+    public void brokerScheduledRule(LambdaInjectConfiguration configuration, GetFunctionResponse output) {
         if (configuration.getScheduleExpression() != null) {
             this.buildLogger.addLogEntry("Brokering Scheduled Rule with schedule expression: " + configuration.getScheduleExpression());
-            PutRuleRequest putRuleRequest = new PutRuleRequest()
-                    .withName(configuration.getFunctionName() + "-scheduled-trigger")
-                    .withScheduleExpression(configuration.getScheduleExpression())
-                    .withState(RuleState.ENABLED);
+            PutRuleRequest putRuleRequest = PutRuleRequest.builder()
+                    .name(configuration.getFunctionName() + "-scheduled-trigger")
+                    .scheduleExpression(configuration.getScheduleExpression())
+                    .state(RuleState.ENABLED).build();
 
-            PutRuleResult putRuleResult = this.amazonCloudWatchEvents.putRule(putRuleRequest);
-            this.buildLogger.addLogEntry("Created Rule: " + putRuleResult.getRuleArn());
+            PutRuleResponse putRuleResult = this.amazonCloudWatchEvents.putRule(putRuleRequest);
+            this.buildLogger.addLogEntry("Created Rule: " + putRuleResult.ruleArn());
 
-            Target target = new Target().withArn(output.getConfiguration().getFunctionArn()).withId(configuration.getFunctionName());
-            PutTargetsRequest putTargetsRequest = new PutTargetsRequest().withTargets(target).withRule(configuration.getFunctionName() + "-scheduled-trigger");
-            PutTargetsResult putTargetsResult = this.amazonCloudWatchEvents.putTargets(putTargetsRequest);
-            this.buildLogger.addLogEntry("Added target " + putTargetsResult.toString() + "to rule " + putRuleResult.getRuleArn());
+            Target target = Target.builder().arn(output.configuration().functionArn()).id(configuration.getFunctionName()).build();
+            PutTargetsRequest putTargetsRequest = PutTargetsRequest.builder().targets(target).rule(configuration.getFunctionName() + "-scheduled-trigger").build();
+            PutTargetsResponse putTargetsResult = this.amazonCloudWatchEvents.putTargets(putTargetsRequest);
+            this.buildLogger.addLogEntry("Added target " + putTargetsResult.toString() + "to rule " + putRuleResult.ruleArn());
         } else {
             this.buildLogger.addLogEntry("No schedule expression provided. Removing any existing scheduled rules.");
-            DescribeRuleRequest describeRuleRequest = new DescribeRuleRequest()
-                    .withName(configuration.getFunctionName() + "-scheduled-trigger");
+            DescribeRuleRequest describeRuleRequest = DescribeRuleRequest.builder()
+                    .name(configuration.getFunctionName() + "-scheduled-trigger").build();
             try {
-                DescribeRuleResult describeRuleResult = this.amazonCloudWatchEvents.describeRule(describeRuleRequest);
+                DescribeRuleResponse describeRuleResult = this.amazonCloudWatchEvents.describeRule(describeRuleRequest);
 
 
-                RemoveTargetsRequest removeTargetsRequest = new RemoveTargetsRequest()
-                        .withRule(configuration.getFunctionName() + "-scheduled-trigger")
-                        .withIds(configuration.getFunctionName());
+                RemoveTargetsRequest removeTargetsRequest = RemoveTargetsRequest.builder()
+                        .rule(configuration.getFunctionName() + "-scheduled-trigger")
+                        .ids(configuration.getFunctionName()).build();
                 buildLogger.addErrorLogEntry("Removing target " + configuration.getFunctionName());
                 this.amazonCloudWatchEvents.removeTargets(removeTargetsRequest);
 
-                DeleteRuleRequest deleteRuleRequest = new DeleteRuleRequest()
-                        .withName(describeRuleResult.getName());
+                DeleteRuleRequest deleteRuleRequest = DeleteRuleRequest.builder()
+                        .name(describeRuleResult.name()).build();
                 this.amazonCloudWatchEvents.deleteRule(deleteRuleRequest);
-                buildLogger.addErrorLogEntry("Deleted existing scheduled rule: " + describeRuleResult.getName());
+                buildLogger.addErrorLogEntry("Deleted existing scheduled rule: " + describeRuleResult.name());
             } catch (ResourceNotFoundException e) {
                 buildLogger.addLogEntry("No scheduled rule found. Skipping...");
             } catch (Exception e) {

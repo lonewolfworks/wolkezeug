@@ -10,20 +10,19 @@
 	<version>1.0.0-SNAPSHOT</version>
 
 	<name>wolkezeug</name>
-	
+
 
 	<properties>
-		<aws-sdk.version>1.12.129</aws-sdk.version>
 		<spring.framework.version>5.2.6.RELEASE</spring.framework.version>
-		
+
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>com.amazonaws</groupId>
-				<artifactId>aws-java-sdk-bom</artifactId>
-				<version>${aws-sdk.version}</version>
+				<groupId>software.amazon.awssdk</groupId>
+				<artifactId>bom</artifactId>
+				<version>2.16.60</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -32,7 +31,7 @@
 				<artifactId>httpcore</artifactId>
 				<version>4.4.13</version>
 			</dependency>
-			
+
 			<dependency>
 				<groupId>com.fasterxml.jackson.dataformat</groupId>
 				<artifactId>jackson-dataformat-cbor</artifactId>
@@ -42,13 +41,13 @@
 	</dependencyManagement>
 
 	<dependencies>
-		
+
 		<dependency>
-		    <groupId>org.apache.logging.log4j</groupId>
-		    <artifactId>log4j-core</artifactId>
-		    <version>2.17.1</version>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>2.17.1</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>javax.inject</groupId>
 			<artifactId>javax.inject</artifactId>
@@ -64,7 +63,7 @@
 		</dependency>
 
 		<!-- WIRED TEST RUNNER DEPENDENCIES -->
-		
+
 		<dependency>
 			<groupId>javax.ws.rs</groupId>
 			<artifactId>jsr311-api</artifactId>
@@ -75,92 +74,92 @@
 
 		<!-- AWS Deps -->
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-ecs</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>ecs</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-ecr</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>ecr</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-cloudformation</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>cloudformation</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-elasticloadbalancing</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>elasticloadbalancing</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-elasticloadbalancingv2</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>elasticloadbalancingv2</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-iam</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>iam</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-ec2</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>ec2</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-s3</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-rds</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>rds</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-sqs</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>sqs</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-sns</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>sns</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-kinesis</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>kinesis</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-sts</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>sts</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-cloudwatch</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>cloudwatch</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-applicationautoscaling</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>applicationautoscaling</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-autoscaling</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>autoscaling</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-dynamodb</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>dynamodb</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-lambda</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>lambda</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-waf</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>waf</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-events</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>cloudwatchevents</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-cloudfront</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>cloudfront</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-secretsmanager</artifactId>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>secretsmanager</artifactId>
 		</dependency>
 
 		<!-- 3rd Party Libs -->
@@ -206,7 +205,7 @@
 			<version>3.3.3</version>
 			<scope>test</scope>
 		</dependency>
-	
+
 		<dependency>
 			<groupId>info.picocli</groupId>
 			<artifactId>picocli</artifactId>
@@ -251,37 +250,22 @@
 				</configuration>
 			</plugin>
 
-			
 
-	
-	
-			<!-- <plugin>
-				<groupId>org.owasp</groupId>
-				<artifactId>dependency-check-maven</artifactId>
-				<version>5.3.1</version>
-				<configuration>
-					<failBuildOnCVSS>8</failBuildOnCVSS>
-					<skipProvidedScope>true</skipProvidedScope>
-					<formats>HTML,XML</formats>
-				</configuration>
-				<executions>
-					<execution>
-						<phase>prepare-package</phase>
-						<goals>
-							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 
--->
+
+
+			<!-- <plugin> <groupId>org.owasp</groupId> <artifactId>dependency-check-maven</artifactId> 
+				<version>5.3.1</version> <configuration> <failBuildOnCVSS>8</failBuildOnCVSS> 
+				<skipProvidedScope>true</skipProvidedScope> <formats>HTML,XML</formats> </configuration> 
+				<executions> <execution> <phase>prepare-package</phase> <goals> <goal>check</goal> 
+				</goals> </execution> </executions> </plugin> -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.9.0</version>
 				<configuration>
-					<source>17</source>
-					<target>17</target>
+					<source>11</source>
+					<target>11</target>
 				</configuration>
 				<executions>
 					<!-- Replacing default-compile as it is treated specially by maven -->

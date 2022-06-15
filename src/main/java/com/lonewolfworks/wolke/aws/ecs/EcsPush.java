@@ -287,7 +287,7 @@ public class EcsPush {
 
         
         //run once to init for KMS' handling
-        TaskDefExecRoleHandler exec = new TaskDefExecRoleHandler();
+        TaskDefExecRoleHandler exec = new TaskDefExecRoleHandler(logger);
         String taskExecRoleBody = exec.generateTaskDefIam(definition);
         String execRoleArn = null;
         String origAppName=definition.getAppName();

@@ -9,12 +9,19 @@ import com.amazonaws.services.ecs.model.Secret;
 
 public class TaskDefExecRoleHandler {
 	
+	private HermanLogger logger;
+
+	public TaskDefExecRoleHandler(HermanLogger logger){
+		this.logger = logger;
+	}
 	public String generateTaskDefIam(EcsPushDefinition definition) {
-	
+		logger.addLogEntry("Generating task-def IAM");
 		//check for secrets
 		Set<String> secArns = new HashSet();
 		for(ContainerDefinition def : definition.getContainerDefinitions()) {
+			logger.addLogEntry("Checking secrets");
     		for(Secret sec : def.getSecrets()) {
+				logger.addLogEntry(sec.toString());
     			if(sec.getValueFrom().contains("arn:")){
     				secArns.add(sec.getValueFrom());
     			}
@@ -22,13 +29,15 @@ public class TaskDefExecRoleHandler {
     	}
 		if(secArns.size()==0) {
 			//no need
+			logger.addLogEntry("No secrets injected, so also skipping ECR (using defaults)");
 			return null;
 		}
 		Set<String> containers = new HashSet();
 		for(ContainerDefinition def : definition.getContainerDefinitions()) {
+			logger.addLogEntry(def.toString());
 			///###.dkr.ecr.us-east-1.amazonaws.com/image:tag
 			if(def.getImage().contains(".dkr.ecr.")) {
-				
+				logger.addLogEntry("adding " + def.getImage() );
 				String root = def.getImage().split("/")[0];
 				String imageAndTag = def.getImage().split("/")[1];
 				String image = imageAndTag.split(":")[0];

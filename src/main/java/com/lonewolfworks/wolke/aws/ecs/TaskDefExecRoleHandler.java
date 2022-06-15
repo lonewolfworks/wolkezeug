@@ -17,7 +17,7 @@ public class TaskDefExecRoleHandler {
 		this.logger = logger;
 	}
 	public String generateTaskDefIam(EcsPushDefinition definition) {
-		logger.addLogEntry("Generating task-def IAM");
+		logger.addLogEntry("Generating task-exec IAM");
 		//check for secrets
 		Set<String> secArns = new HashSet();
 		for(ContainerDefinition def : definition.getContainerDefinitions()) {
@@ -29,11 +29,11 @@ public class TaskDefExecRoleHandler {
     			}
     		}
     	}
-		if(secArns.size()==0) {
-			//no need
-			logger.addLogEntry("No secrets injected, so also skipping ECR (using defaults)");
-			return null;
-		}
+		// if(secArns.size()==0) {
+		// 	//no need
+		// 	logger.addLogEntry("No secrets injected, so also skipping ECR (using defaults)");
+		// 	return null;
+		// }
 		Set<String> containers = new HashSet();
 		for(ContainerDefinition def : definition.getContainerDefinitions()) {
 			logger.addLogEntry(def.toString());

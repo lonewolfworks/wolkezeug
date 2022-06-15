@@ -7,6 +7,8 @@ import java.util.StringJoiner;
 import com.amazonaws.services.ecs.model.ContainerDefinition;
 import com.amazonaws.services.ecs.model.Secret;
 
+import com.lonewolfworks.wolke.logging.HermanLogger;
+
 public class TaskDefExecRoleHandler {
 	
 	private HermanLogger logger;

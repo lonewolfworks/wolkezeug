@@ -64,6 +64,7 @@ import com.amazonaws.services.ecs.model.Secret;
 import com.amazonaws.services.ecs.model.Service;
 import com.amazonaws.services.ecs.model.ServiceEvent;
 import com.amazonaws.services.ecs.model.StopTaskRequest;
+import com.amazonaws.services.ecs.model.TagResourceRequest;
 import com.amazonaws.services.ecs.model.Task;
 import com.amazonaws.services.ecs.model.TaskDefinition;
 import com.amazonaws.services.ecs.model.TaskDefinitionPlacementConstraint;
@@ -264,11 +265,20 @@ public class EcsPush {
 
         String rolePath = taskProperties.getIamDefaultRolePath();
 
+        
+    	List<HermanTag> tags = new ArrayList<>();
+    	tags.add(new HermanTag(taskProperties.getSbuTagKey(), clusterMetadata.getNewrelicSbuTag()));
+    	tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
+    	tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
+    	tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
+        tags = TagUtil.mergeTags(tags, definition.getTags());
+        
+        
         IAMBroker iamBroker = new IAMBroker(logger);
         Role appRole;
         if (definition.getIamRole() == null || definition.getAppName().equals(definition.getIamRole())) {
             logger.addLogEntry("Brokering role with policy " + customIamPolicyFileName);
-            appRole = iamBroker.brokerAppRole(iamClient, definition, customIamPolicy, rolePath, "", bambooPropertyHandler, pushContext.getSessionCredentials());
+            appRole = iamBroker.brokerAppRole(iamClient, definition, customIamPolicy, rolePath, "", TagUtil.hermanToIamTags(tags), bambooPropertyHandler, pushContext.getSessionCredentials());
         } else {
             logger.addLogEntry("Using existing role: " + definition.getIamRole());
             appRole = iamBroker.getRole(iamClient, definition.getIamRole());
@@ -296,7 +306,7 @@ public class EcsPush {
         	if(definition.getAppName().endsWith("-rdsbroker")) {
         		definition.setAppName(origAppName.replace("-rdsbroker", ""));
         	}
-        	Role execRole = iamBroker.brokerAppRole(iamClient, definition, taskExecRoleBody, rolePath, "-taskexec", bambooPropertyHandler, pushContext.getSessionCredentials());
+        	Role execRole = iamBroker.brokerAppRole(iamClient, definition, taskExecRoleBody, rolePath, "-taskexec", TagUtil.hermanToIamTags(tags), bambooPropertyHandler, pushContext.getSessionCredentials());
         	execRoleArn = execRole.getArn();
         	logger.addLogEntry("Exec Role arn:"+execRoleArn);
         }
@@ -313,7 +323,7 @@ public class EcsPush {
         	if(definition.getAppName().endsWith("-rdsbroker")) {
         		definition.setAppName(origAppName.replace("-rdsbroker", ""));
         	}
-        	Role execRole = iamBroker.brokerAppRole(iamClient, definition, taskExecRoleBody, rolePath, "-taskexec", bambooPropertyHandler, pushContext.getSessionCredentials());
+        	Role execRole = iamBroker.brokerAppRole(iamClient, definition, taskExecRoleBody, rolePath, "-taskexec", TagUtil.hermanToIamTags(tags), bambooPropertyHandler, pushContext.getSessionCredentials());
         	execRoleArn = execRole.getArn();
         	logger.addLogEntry("Exec Role arn:"+execRoleArn);
         }
@@ -345,7 +355,7 @@ public class EcsPush {
 
 
         RegisterTaskDefinitionResult taskResult = registerTask(definition, definition.getAppName(), ecsClient,
-                clusterMetadata.getClusterId(), execRoleArn);
+                clusterMetadata.getClusterId(), execRoleArn, tags);
 
         logger.addLogEntry("Task role: " + definition.getTaskRoleArn());
 
@@ -355,7 +365,7 @@ public class EcsPush {
             ServicePurger purger = new ServicePurger(ecsClient, logger);
             purger.purgeOtherClusters(definition.getCluster(), definition.getAppName());
             deployService(ecsClient, clusterMetadata, definition, bal, taskResult.getTaskDefinition(),
-                    versionForRollback);
+                    versionForRollback, tags);
 
             // only post-push for services, not task
             brokerServicesPostPush(definition, clusterMetadata);
@@ -446,12 +456,14 @@ public class EcsPush {
     }
 
     private RegisterTaskDefinitionResult registerTask(EcsPushDefinition definition, String appName, AmazonECS ecsClient,
-                                                      String clusterId, String executionRoleArn) {
+                                                      String clusterId, String executionRoleArn, List<HermanTag> tags) {
+        
         RegisterTaskDefinitionResult taskResult = ecsClient.registerTaskDefinition(new RegisterTaskDefinitionRequest()
                 .withFamily(appName).withContainerDefinitions(definition.getContainerDefinitions())
                 .withVolumes(definition.getVolumes()).withPlacementConstraints(definition.getTaskPlacementConstraints())
                 .withNetworkMode(definition.getNetworkMode()).withTaskRoleArn(definition.getTaskRoleArn())
                 .withMemory(definition.getTaskMemory())
+                .withTags(TagUtil.hermanToEcsTags(tags))
                 .withExecutionRoleArn(executionRoleArn)
         		);
         logger.addLogEntry("Registered new task: " + taskResult.getTaskDefinition().getTaskDefinitionArn());
@@ -515,7 +527,7 @@ public class EcsPush {
     }
 
     private String deployService(AmazonECS ecsClient, EcsClusterMetadata clusterMetadata, EcsPushDefinition definition,
-                                 LoadBalancer balancer, TaskDefinition taskDefinition, TaskDefinition priorDef) {
+                                 LoadBalancer balancer, TaskDefinition taskDefinition, TaskDefinition priorDef, List<HermanTag> tags) {
         String appName = definition.getAppName();
         DescribeServicesResult serviceSearch = ecsClient.describeServices(
                 new DescribeServicesRequest().withCluster(clusterMetadata.getClusterId()).withServices(appName));
@@ -566,6 +578,7 @@ public class EcsPush {
                     .withDeploymentConfiguration(definition.getService().getDeploymentConfiguration())
                     .withClientToken(UUID.randomUUID().toString())
                     .withPlacementConstraints(definition.getService().getPlacementConstraints())
+                    .withTags(TagUtil.hermanToEcsTags(tags))
                     .withPlacementStrategy(definition.getService().getPlacementStrategies());
 
             if (balancer != null) {
@@ -596,6 +609,7 @@ public class EcsPush {
                 updateRequest.withNetworkConfiguration(networkConfiguration);
             }
             ecsClient.updateService(updateRequest);
+            ecsClient.tagResource(new TagResourceRequest().withResourceArn(serviceArn).withTags(TagUtil.hermanToEcsTags(tags)));
         }
 
         waitForRequestInitialization(appName, ecsClient, clusterMetadata);
@@ -816,38 +830,30 @@ public class EcsPush {
     	tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
     	tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
     	tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
-
+        tags = TagUtil.mergeTags(tags, definition.getTags());
+        
     	Map<String, String> brokered = new HashMap();
     	for(ContainerDefinition def : definition.getContainerDefinitions()) {
     		for(Secret sec : def.getSecrets()) {
     			if(sec.getValueFrom().startsWith("secretsbroker:")) {
     				String path = sec.getValueFrom().replace("secretsbroker:", "");
+    				String params = "";
+    				if(path.contains(":")) {
+    			    	params = path.substring(path.indexOf(":"), path.length());
+    			    	path = path.substring(0, path.indexOf(":"));
+    				}
     				if(!brokered.containsKey(path)) {
     					SecretsManagerBroker broker = new SecretsManagerBroker(logger, secretsManagerClient, kmsKeyId, TagUtil.hermanToSecretsManagerTags(tags));
                 		String arn = broker.brokerSecretsManagerShell(path, definition.getAppName());
-                		sec.setValueFrom(arn);
+                		sec.setValueFrom(arn+params);
                 		brokered.put(path, arn);
                 	} else {
-                		sec.setValueFrom(brokered.get(path));
+                		sec.setValueFrom(brokered.get(path)+params);
                 	}
     			}
     		}
     	}
-//    	for(ContainerDefinition def : definition.getContainerDefinitions()) {
-//    		for(Secret sec : def.getSecrets()) {
-//    			if(sec.getValueFrom().startsWith("${rdsbroker:")) {
-//    				String path = StringUtils.substringBetween(sec.getValueFrom(), "${secretsbroker:", "}");
-//    				if(!brokered.containsKey(path)) {
-//    					SecretsManagerBroker broker = new SecretsManagerBroker(logger);
-//                		String arn = broker.brokerSecretsManagerShell(secretsManagerClient, path, kmsKeyId, definition.getAppName(), TagUtil.hermanToSecretsManagerTags(tags));
-//                		sec.setValueFrom(arn);
-//                		brokered.put(path, arn);
-//                	} else {
-//                		sec.setValueFrom(brokered.get(path));
-//                	}
-//    			}
-//    		}
-//    	}
+
     }
 
     private String brokerKms(EcsPushDefinition definition, EcsClusterMetadata clusterMetadata) {
@@ -877,7 +883,8 @@ public class EcsPush {
     	tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
     	tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
     	tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
-    	
+        tags = TagUtil.mergeTags(tags, definition.getTags());
+        
     	SecretsManagerBroker broker = new SecretsManagerBroker(logger, secretsManagerClient, applicationKeyId, TagUtil.hermanToSecretsManagerTags(tags));
     	
         RdsBroker rdsBroker = new RdsBroker(pushContext, rdsClient, broker, definition, clusterMetadata,
@@ -1021,4 +1028,11 @@ public class EcsPush {
 //            pushContext.getLogger().addLogEntry("Error logging result to CW: " + e.getMessage());// nothing to do
 //        }
 //    }
+    
+    public static void main(String...strings) {
+    	String sec = "/foo/bar/asdf:par:erm";
+    	String param = sec.substring(sec.indexOf(":"), sec.length());
+    	String path = sec.substring(0, sec.indexOf(":"));
+        System.out.println(path + " --- " + param);
+    }
 }

@@ -313,7 +313,7 @@ public class EcsPush {
         //reset
         definition.setAppName(origAppName);
         
-        brokerServicesPrePush(definition, versionForRollback, injectMagic, clusterMetadata, appRole);
+        brokerServicesPrePush(definition, versionForRollback, injectMagic, clusterMetadata, appRole, tags);
         
         //rerun to fill in secrets
         taskExecRoleBody = exec.generateTaskDefIam(definition);
@@ -791,14 +791,14 @@ public class EcsPush {
     }
 
     private void brokerServicesPrePush(EcsPushDefinition definition, TaskDefinition versionForRollback, EcsDefaultEnvInjection injectMagic,
-                                       EcsClusterMetadata clusterMetadata, Role appRole) {
-        String applicationKeyId = brokerKms(definition, clusterMetadata);
-        brokerSecretsManager(definition, clusterMetadata, applicationKeyId);
+                                       EcsClusterMetadata clusterMetadata, Role appRole, List<HermanTag> tags) {
+        String applicationKeyId = brokerKms(definition, clusterMetadata, tags);
+        brokerSecretsManager(definition, clusterMetadata, applicationKeyId, tags);
         brokerSqs(definition);
         brokerSns(definition);
         brokerS3(definition, clusterMetadata, applicationKeyId);
         brokerKinesisStream(definition);
-        brokerRds(definition, injectMagic, clusterMetadata, applicationKeyId, appRole);
+        brokerRds(definition, injectMagic, clusterMetadata, applicationKeyId, appRole, tags);
         brokerDynamoDB(definition);
         brokerAuth0(definition, injectMagic, clusterMetadata, applicationKeyId);
     }
@@ -823,14 +823,7 @@ public class EcsPush {
     }
 
     private void brokerSecretsManager(EcsPushDefinition definition, EcsClusterMetadata clusterMetadata,
-                                      String kmsKeyId) {
-
-    	List<HermanTag> tags = new ArrayList<>();
-    	tags.add(new HermanTag(taskProperties.getSbuTagKey(), clusterMetadata.getNewrelicSbuTag()));
-    	tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
-    	tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
-    	tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
-        tags = TagUtil.mergeTags(tags, definition.getTags());
+                                      String kmsKeyId, List<HermanTag> tags) {
         
     	Map<String, String> brokered = new HashMap();
     	for(ContainerDefinition def : definition.getContainerDefinitions()) {
@@ -856,16 +849,11 @@ public class EcsPush {
 
     }
 
-    private String brokerKms(EcsPushDefinition definition, EcsClusterMetadata clusterMetadata) {
+    private String brokerKms(EcsPushDefinition definition, EcsClusterMetadata clusterMetadata, List<HermanTag> tags) {
         KmsBroker broker = new KmsBroker(logger, bambooPropertyHandler, fileUtil, taskProperties,
                 this.pushContext.getSessionCredentials(), this.pushContext.getCustomConfigurationBucket(),
                 this.pushContext.getRegion());
 
-        List<HermanTag> tags = new ArrayList<>();
-        tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
-        tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
-
-        tags = TagUtil.mergeTags(tags, definition.getTags());
         String applicationKeyId = "";
         if (broker.isActive(definition)) {
             applicationKeyId = broker.brokerKey(kmsClient, definition, TagUtil.hermanToKmsTags(tags));
@@ -876,14 +864,7 @@ public class EcsPush {
     }
 
     private void brokerRds(EcsPushDefinition definition, EcsDefaultEnvInjection injectMagic,
-                           EcsClusterMetadata clusterMetadata, String applicationKeyId, Role appRole) {
- 
-    	List<HermanTag> tags = new ArrayList<>();
-    	tags.add(new HermanTag(taskProperties.getSbuTagKey(), clusterMetadata.getNewrelicSbuTag()));
-    	tags.add(new HermanTag(taskProperties.getOrgTagKey(), clusterMetadata.getNewrelicOrgTag()));
-    	tags.add(new HermanTag(taskProperties.getAppTagKey(), definition.getAppName()));
-    	tags.add(new HermanTag(taskProperties.getClusterTagKey(), clusterMetadata.getClusterId()));
-        tags = TagUtil.mergeTags(tags, definition.getTags());
+                           EcsClusterMetadata clusterMetadata, String applicationKeyId, Role appRole, List<HermanTag> tags) {
         
     	SecretsManagerBroker broker = new SecretsManagerBroker(logger, secretsManagerClient, applicationKeyId, TagUtil.hermanToSecretsManagerTags(tags));
     	

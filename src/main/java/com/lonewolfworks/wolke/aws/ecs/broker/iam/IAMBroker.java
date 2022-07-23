@@ -18,6 +18,7 @@ package com.lonewolfworks.wolke.aws.ecs.broker.iam;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
@@ -36,6 +37,7 @@ import com.amazonaws.services.identitymanagement.model.NoSuchEntityException;
 import com.amazonaws.services.identitymanagement.model.PutRolePermissionsBoundaryRequest;
 import com.amazonaws.services.identitymanagement.model.PutRolePolicyRequest;
 import com.amazonaws.services.identitymanagement.model.Role;
+import com.amazonaws.services.identitymanagement.model.Tag;
 import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyRequest;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
@@ -44,6 +46,7 @@ import com.lonewolfworks.wolke.aws.AwsExecException;
 import com.lonewolfworks.wolke.aws.credentials.CredentialsHandler;
 import com.lonewolfworks.wolke.aws.ecs.PropertyHandler;
 import com.lonewolfworks.wolke.aws.ecs.PushType;
+import com.lonewolfworks.wolke.aws.tags.HermanTag;
 import com.lonewolfworks.wolke.logging.HermanLogger;
 
 public class IAMBroker {
@@ -66,9 +69,10 @@ public class IAMBroker {
                               String rolePolicy,
                               String rolePath,
                               String suffix,
+                              List<Tag> tags,
                               PropertyHandler propertyHandler,
                               AWSCredentials sessionCredentials) {
-        return brokerAppRole(client, definition, rolePolicy, rolePath, suffix, propertyHandler, sessionCredentials, PushType.ECS);
+        return brokerAppRole(client, definition, rolePolicy, rolePath, suffix, tags, propertyHandler, sessionCredentials, PushType.ECS);
     }
 
     public Role brokerAppRole(AmazonIdentityManagement client, 
@@ -76,6 +80,7 @@ public class IAMBroker {
                               String rolePolicy, 
                               String rolePath, 
                               String suffix,
+                              List<Tag> tags,
                               PropertyHandler propertyHandler,
                               AWSCredentials sessionCredentials, PushType pushType) {
     

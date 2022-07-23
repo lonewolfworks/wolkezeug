@@ -13,7 +13,7 @@
 	
 
 	<properties>
-		<aws-sdk.version>1.12.129</aws-sdk.version>
+		<aws-sdk.version>1.12.266</aws-sdk.version>
 		<spring.framework.version>5.2.6.RELEASE</spring.framework.version>
 		
 	</properties>

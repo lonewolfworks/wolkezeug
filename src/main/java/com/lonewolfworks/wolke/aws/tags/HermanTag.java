@@ -72,6 +72,17 @@ public class HermanTag {
             .withValue(this.value);
     }
     
+    public com.amazonaws.services.identitymanagement.model.Tag toIamTag() {
+        return new com.amazonaws.services.identitymanagement.model.Tag()
+            .withKey(this.key)
+            .withValue(this.value);
+    }
+    public com.amazonaws.services.ecs.model.Tag toEcsTag() {
+        return new com.amazonaws.services.ecs.model.Tag()
+            .withKey(this.key)
+            .withValue(this.value);
+    } 
+    
     public String getKey() {
         return key;
     }

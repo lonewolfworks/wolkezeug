@@ -4,6 +4,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.StringJoiner;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.amazonaws.services.ecs.model.ContainerDefinition;
 import com.amazonaws.services.ecs.model.Secret;
 
@@ -25,6 +27,11 @@ public class TaskDefExecRoleHandler {
     		for(Secret sec : def.getSecrets()) {
 				logger.addLogEntry(sec.toString());
     			if(sec.getValueFrom().contains("arn:")){
+    				String arn = sec.getValueFrom();
+    				int paramStart= StringUtils.ordinalIndexOf(arn, ":", 7);
+    				if(paramStart!=-1) {
+    					arn = arn.substring(0, paramStart);
+    				}
     				secArns.add(sec.getValueFrom());
     			}
     		}
@@ -99,5 +106,4 @@ public class TaskDefExecRoleHandler {
 		
 		return buf.toString();
 	}
-
 }

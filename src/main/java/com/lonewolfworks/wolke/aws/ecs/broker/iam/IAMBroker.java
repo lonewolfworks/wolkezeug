@@ -38,6 +38,7 @@ import com.amazonaws.services.identitymanagement.model.PutRolePermissionsBoundar
 import com.amazonaws.services.identitymanagement.model.PutRolePolicyRequest;
 import com.amazonaws.services.identitymanagement.model.Role;
 import com.amazonaws.services.identitymanagement.model.Tag;
+import com.amazonaws.services.identitymanagement.model.TagRoleRequest;
 import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyRequest;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
@@ -47,6 +48,7 @@ import com.lonewolfworks.wolke.aws.credentials.CredentialsHandler;
 import com.lonewolfworks.wolke.aws.ecs.PropertyHandler;
 import com.lonewolfworks.wolke.aws.ecs.PushType;
 import com.lonewolfworks.wolke.aws.tags.HermanTag;
+import com.lonewolfworks.wolke.aws.tags.TagUtil;
 import com.lonewolfworks.wolke.logging.HermanLogger;
 
 public class IAMBroker {
@@ -106,6 +108,7 @@ public class IAMBroker {
             CreateRoleRequest createRoleRequest = new CreateRoleRequest()
                     .withPath(rolePath)
                     .withRoleName(roleName)
+                    .withTags(tags)
                     .withAssumeRolePolicyDocument(assumePolicy);
 
             determinePermissionBoundary(rolePath, roleName, sessionCredentials).ifPresent(permissionBoundary -> {
@@ -119,7 +122,8 @@ public class IAMBroker {
             buildLogger.addLogEntry("... Using existing role: " + roleName);
 
             client.updateAssumeRolePolicy(new UpdateAssumeRolePolicyRequest().withRoleName(roleName).withPolicyDocument(assumePolicy));
-
+            client.tagRole(new TagRoleRequest().withRoleName(roleName).withTags(tags));
+            
             determinePermissionBoundary(rolePath, roleName, sessionCredentials).ifPresent(permissionBoundary -> {
                 buildLogger.addLogEntry("... Adding Permission Boundary: " + permissionBoundary);
                 PutRolePermissionsBoundaryRequest boundaryRequest = new PutRolePermissionsBoundaryRequest()

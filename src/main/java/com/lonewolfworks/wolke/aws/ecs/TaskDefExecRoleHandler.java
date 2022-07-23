@@ -32,7 +32,7 @@ public class TaskDefExecRoleHandler {
     				if(paramStart!=-1) {
     					arn = arn.substring(0, paramStart);
     				}
-    				secArns.add(sec.getValueFrom());
+    				secArns.add(arn);
     			}
     		}
     	}
